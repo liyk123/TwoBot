@@ -4,26 +4,27 @@
 /// 警告: 这个项目使用了JSON for modern C++, 必须使用UTF8编码，不然会出现异常。
 /// warning: this project uses JSON for modern C++, must use UTF8 encoding, otherwise it will throw exception.
 
-int main() {
-    using twobot::Config;
-    using twobot::BotInstance;
-    using twobot::ApiSet;
-    using namespace twobot::Event;
+using twobot::Config;
+using twobot::BotInstance;
+using twobot::ApiSet;
+using namespace twobot::Event;
 
+int main(int argc, char** args) {
     // 解决UTF8编码，中文乱码问题，不需要可以不加
-    // system("chcp 65001 && cls");
-
+#ifdef _WIN32
+    system("chcp 65001 && cls");
+#endif
     auto instance = BotInstance::createInstance(Config{
-        "127.0.0.1",
-        8080,
-        8081,
+        "0.0.0.0",
+        0,
+        9444,
         std::nullopt
     });
 
 
-    if(!instance->getApiSet().testConnection()){
-        std::cerr << "测试连接失败，请启动onebot服务器，并配置HTTP端口！" << std::endl;
-    }
+    //if(!instance->getApiSet().testConnection()){
+    //    std::cerr << "测试连接失败，请启动onebot服务器，并配置HTTP端口！" << std::endl;
+    //}
 
     instance->onEvent<GroupMsg>([&instance](const GroupMsg & msg){
         if(msg.raw_message == "你好")

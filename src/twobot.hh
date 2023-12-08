@@ -7,7 +7,12 @@
 #include <unordered_map>
 #include <functional>
 #include <nlohmann/json.hpp>
+#include <brynet/net/http/HttpService.hpp>
 
+namespace twobot
+{
+    using Session = brynet::net::http::HttpSession;
+}
 
 namespace twobot
 {
@@ -45,6 +50,9 @@ namespace twobot {
 
     // Api集合，所有对机器人调用的接口都在这里
     struct ApiSet{
+        
+        void bindSession(const Session::Ptr& pSession);
+
         bool testConnection();
         // 万api之母，负责提起所有的api的请求
         using ApiResult = std::pair<bool, nlohmann::json>;
@@ -559,6 +567,7 @@ namespace twobot {
     protected:
         ApiSet (const Config &config);
         Config config;
+        Session::Ptr m_pSession;
         friend class BotInstance;
     };
 
@@ -612,13 +621,20 @@ namespace twobot {
             
             std::string raw_message; //原始文本消息（含有CQ码）
             std::string group_name; // 群的名称
-            enum{
+            enum SUB_TYPE {
                 NORMAL,     // 正常消息
                 ANONYMOUS,  // 系统消息
                 NOTICE,     // 通知消息，如 管理员已禁止群内匿名聊天
             } sub_type; //消息子类型
 
             nlohmann::json sender; // 日后进一步处理
+
+            NLOHMANN_JSON_SERIALIZE_ENUM(SUB_TYPE, {
+                {NORMAL,"normal"},
+                {ANONYMOUS,"anonymous"},
+                {NOTICE,"notice"},
+             })
+            NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(GroupMsg, time, user_id, self_id, raw_message, group_name, sender)
         protected:
             virtual void parse() override;
         };
@@ -816,7 +832,7 @@ namespace twobot {
         static std::unique_ptr<BotInstance> createInstance(const Config &config);
         
         // 获取Api集合
-        ApiSet& getApiSet();
+        ApiSet& getApiSet(const Session::Ptr& session = nullptr);
         
         // 注册事件监听器
         template<class EventType>

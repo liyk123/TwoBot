@@ -1,11 +1,17 @@
+#include "twobot.hh"
 #include "nlohmann/json_fwd.hpp"
 #include <string>
 #include <twobot.hh>
 #include <httplib.h>
 #include <utility>
 
-namespace twobot {
-    
+namespace twobot 
+{
+    void ApiSet::bindSession(const Session::Ptr& pSession)
+    {
+        m_pSession = pSession;
+    }
+
     bool ApiSet::testConnection() {
         httplib::Client client(config.host, config.api_port);
         httplib::Headers headers = {
@@ -26,45 +32,64 @@ namespace twobot {
         return response->status == 200;
     }
 
-    ApiSet::ApiSet(const Config & config) : config(config){
+    ApiSet::ApiSet(const Config & config) 
+        : config(config)
+        , m_pSession(nullptr)
+    {
 
     }
 
     ApiSet::ApiResult ApiSet::callApi(const std::string &api_name, const nlohmann::json &data) {
         ApiResult result{false, {}};
-        httplib::Client client(config.host, config.api_port);
-         httplib::Headers headers = {
-            {"Content-Type", "application/json"}
-         };
-        if(config.token.has_value()) {
-            headers.insert(
-                std::make_pair(
-                    std::string{"Authorization"} ,
-                    "Bearer " + *config.token
-                    )
-            );
-        }
-        
-        
-        auto http_result= client.Post(
-            api_name,
-            headers,
-            data.dump(),
-            "application/json"
-            );
-        
-        if(http_result->status == 200) {
-            result.first = true;
-        }else{
-            result.first = false;
-        }
 
-        try{
-            result.second = nlohmann::json::parse(http_result->body);
-        }catch(const std::exception &e){
-            result.second = nlohmann::json{
-                {"error",e.what()}
+        if (m_pSession.get()) 
+        {
+            nlohmann::json content = 
+            {
+                {"action", api_name},
+                {"params", data},
+                {"echo", std::clock()}
             };
+            m_pSession->send(content);
+        }
+        else
+        {
+            httplib::Client client(config.host, config.api_port);
+            httplib::Headers headers = {
+               {"Content-Type", "application/json"}
+            };
+            if (config.token.has_value()) {
+                headers.insert(
+                    std::make_pair(
+                        std::string{ "Authorization" },
+                        "Bearer " + *config.token
+                    )
+                );
+            }
+
+
+            auto http_result = client.Post(
+                api_name,
+                headers,
+                data.dump(),
+                "application/json"
+            );
+
+            if (http_result->status == 200) {
+                result.first = true;
+            }
+            else {
+                result.first = false;
+            }
+
+            try {
+                result.second = nlohmann::json::parse(http_result->body);
+            }
+            catch (const std::exception& e) {
+                result.second = nlohmann::json{
+                    {"error",e.what()}
+                };
+            }
         }
         return result;
     }

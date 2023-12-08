@@ -21,7 +21,8 @@ namespace twobot {
 		return std::unique_ptr<BotInstance>(new BotInstance{config} );
 	}
 
-	ApiSet& BotInstance::getApiSet() {
+	ApiSet& BotInstance::getApiSet(const Session::Ptr& session) {
+		apiSet.bindSession(session);
 		return this->apiSet;
 	}
 
@@ -187,20 +188,8 @@ namespace twobot {
 	}
 
 	void Event::GroupMsg::parse() {
-        this->time = this->raw_msg["time"];
-		this->user_id = raw_msg["user_id"];
-		this->self_id = raw_msg["self_id"];
-		this->group_id = raw_msg["group_id"];
-		this->raw_message = raw_msg["raw_message"];
-		this->group_name = raw_msg["group_name"];
-        //this->sub_type = raw_msg["sub_type"]; 
-		if(raw_msg["sub_type"] == "normal")
-			this->sub_type = NORMAL;
-		else if(raw_msg["sub_type"] == "anonymous")
-			this->sub_type = ANONYMOUS;
-		else if(raw_msg["sub_type"] == "notice")
-			this->sub_type = NOTICE;
-        this->sender = raw_msg["sender"];
+		sub_type = raw_msg["sub_type"];
+		*this = raw_msg.get<GroupMsg>();
 	}
 
 	void Event::PrivateMsg::parse() {
