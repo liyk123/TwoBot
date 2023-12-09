@@ -188,7 +188,6 @@ namespace twobot {
 	}
 
 	void Event::GroupMsg::parse() {
-		sub_type = raw_msg["sub_type"];
 		*this = raw_msg.get<GroupMsg>();
 	}
 

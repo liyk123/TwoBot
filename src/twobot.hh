@@ -598,7 +598,7 @@ namespace twobot {
             uint64_t self_id; // 机器人自身QQ
 
             std::string raw_message; //原始文本消息（含有CQ码）
-            enum{
+            enum SUB_TYPE {
                 FRIEND, // 好友
                 GROUP,  // 群私聊
                 OTHER   // 其他
@@ -608,6 +608,14 @@ namespace twobot {
         protected:
             virtual void parse() override;
         };
+
+        NLOHMANN_JSON_SERIALIZE_ENUM(PrivateMsg::SUB_TYPE, {
+            {PrivateMsg::SUB_TYPE::FRIEND, "friend"},
+            {PrivateMsg::SUB_TYPE::GROUP, "group"},
+            {PrivateMsg::SUB_TYPE::OTHER, "other"},
+        })
+
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(PrivateMsg, time, user_id, self_id, raw_message, sub_type, sender)
 
         struct GroupMsg : EventBase{
             EventType getType() const override{
@@ -628,16 +636,17 @@ namespace twobot {
             } sub_type; //消息子类型
 
             nlohmann::json sender; // 日后进一步处理
-
-            NLOHMANN_JSON_SERIALIZE_ENUM(SUB_TYPE, {
-                {NORMAL,"normal"},
-                {ANONYMOUS,"anonymous"},
-                {NOTICE,"notice"},
-             })
-            NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(GroupMsg, time, user_id, self_id, raw_message, group_name, sender)
         protected:
             virtual void parse() override;
         };
+        
+        NLOHMANN_JSON_SERIALIZE_ENUM(GroupMsg::SUB_TYPE, {
+            {GroupMsg::SUB_TYPE::NORMAL, "normal"},
+            {GroupMsg::SUB_TYPE::ANONYMOUS, "anonymous"},
+            {GroupMsg::SUB_TYPE::NOTICE, "notice"},
+        })
+
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GroupMsg, time, user_id, self_id, group_id, raw_message, group_name, sub_type, sender)
 
         struct EnableEvent : EventBase{
             EventType getType() const override{
@@ -649,6 +658,8 @@ namespace twobot {
             virtual void parse() override;
         };
 
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(EnableEvent, time, self_id)
+
         struct DisableEvent : EventBase{
             EventType getType() const override{
                 return {"meta_event", "disable"};
@@ -659,6 +670,8 @@ namespace twobot {
             virtual void parse() override;
         };
 
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisableEvent, time, self_id)
+
         struct ConnectEvent : EventBase{
             EventType getType() const override{
                 return {"meta_event", "connect"};
@@ -668,6 +681,8 @@ namespace twobot {
         protected:
             virtual void parse() override;
         };
+
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ConnectEvent, time, self_id)
 
         struct GroupUploadNotice : EventBase{
             EventType getType() const override{
@@ -683,6 +698,8 @@ namespace twobot {
             virtual void parse() override;
         };
 
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GroupUploadNotice, time, user_id, self_id, group_id, file)
+
         struct GroupAdminNotice : EventBase{
             EventType getType() const override{
                 return {"notice", "group_admin"};
@@ -692,13 +709,20 @@ namespace twobot {
             uint64_t self_id; // 机器人自身QQ
             uint64_t group_id; // 群QQ
             uint64_t user_id; // 管理员的QQ
-            enum {
+            enum SUB_TYPE {
                 SET,
                 UNSET,
             } sub_type; // 事件子类型，分别表示设置和取消设置
         protected:
             virtual void parse() override;
         };
+
+        NLOHMANN_JSON_SERIALIZE_ENUM(GroupAdminNotice::SUB_TYPE, {
+            {GroupAdminNotice::SUB_TYPE::SET, "set"},
+            {GroupAdminNotice::SUB_TYPE::UNSET, "unset"},
+        })
+
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GroupAdminNotice, time, user_id, self_id, group_id, sub_type)
 
         struct GroupDecreaseNotice : EventBase{
             EventType getType() const override{
@@ -710,7 +734,7 @@ namespace twobot {
             uint64_t group_id; // 群QQ
             uint64_t user_id; // 用户QQ
             uint64_t operator_id; // 操作者QQ 如果是主动退群，和user_id一致
-            enum {
+            enum SUB_TYPE {
                 LEAVE,      // 退出
                 KICK,       // 被踢出
                 KICK_ME,    // 机器人被踢出
@@ -718,6 +742,12 @@ namespace twobot {
         protected:
             virtual void parse() override;
         };
+
+        NLOHMANN_JSON_SERIALIZE_ENUM(GroupDecreaseNotice::SUB_TYPE, {
+            {GroupDecreaseNotice::SUB_TYPE::LEAVE, "leave"},
+            {GroupDecreaseNotice::SUB_TYPE::KICK, "kick"},
+            {GroupDecreaseNotice::SUB_TYPE::KICK_ME, "kick_me"}
+        })
 
         struct GroupInceaseNotice : EventBase{
             EventType getType() const override{
