@@ -188,132 +188,58 @@ namespace twobot {
 	}
 
 	void Event::GroupMsg::parse() {
-		*this = raw_msg.get<GroupMsg>();
+		raw_msg.get_to(*this);
 	}
 
 	void Event::PrivateMsg::parse() {
-        this->time = this->raw_msg["time"];
-		this->user_id = raw_msg["user_id"];
-		this->self_id = raw_msg["self_id"];
-		this->raw_message = raw_msg["raw_message"];
-        // this->sub_type = raw_msg["sub_type"];
-		if(raw_msg["sub_type"] == "friend")
-			this->sub_type = FRIEND;
-		if(raw_msg["sub_type"] == "group")
-			this->sub_type = GROUP;
-		if(raw_msg["sub_type"] == "other")
-			this->sub_type = OTHER;
-        this->sender = raw_msg["sender"];
+		raw_msg.get_to(*this);
 	}
 
 	void Event::EnableEvent::parse(){
-		this->time = this->raw_msg["time"];
-		this->self_id = raw_msg["self_id"];
+		raw_msg.get_to(*this);
 	}
 
 	void Event::DisableEvent::parse(){
-		this->time = this->raw_msg["time"];
-		this->self_id = raw_msg["self_id"];
+		raw_msg.get_to(*this);
 	}
 
 	void Event::ConnectEvent::parse(){
-		this->time = this->raw_msg["time"];
-		this->self_id = raw_msg["self_id"];
+		raw_msg.get_to(*this);
 	}
 
 	void Event::GroupUploadNotice::parse(){
-		this->time = this->raw_msg["time"];
-		this->self_id = raw_msg["self_id"];
-		this->group_id = raw_msg["group_id"];
-		this->user_id = raw_msg["user_id"];
-		this->file = raw_msg["file"];
+		raw_msg.get_to(*this);
 	}
 
 	void Event::GroupAdminNotice::parse(){
-		this->time = this->raw_msg["time"];
-		this->self_id = raw_msg["self_id"];
-		this->group_id = raw_msg["group_id"];
-		this->user_id = raw_msg["user_id"];
-		this->sub_type = ( raw_msg["sub_type"] == "set" ) ? SET : UNSET;
+		raw_msg.get_to(*this);
 	}
 
 	void Event::GroupDecreaseNotice::parse(){
-		this->time = this->raw_msg["time"];
-		this->self_id = raw_msg["self_id"];
-		this->group_id = raw_msg["group_id"];
-		this->user_id = raw_msg["user_id"];
-		this->operator_id = raw_msg["operator_id"];
-		if(raw_msg["sub_type"] == "leave")
-			this->sub_type = LEAVE;
-		else if(raw_msg["sub_type"] == "kick")
-			this->sub_type = KICK;
-		else 
-			this->sub_type = KICK_ME;
+		raw_msg.get_to(*this);
 	}
 
 	void Event::GroupInceaseNotice::parse(){
-		this->time = this->raw_msg["time"];
-		this->self_id = raw_msg["self_id"];
-		this->group_id = raw_msg["group_id"];
-		this->user_id = raw_msg["user_id"];
-		this->operator_id = raw_msg["operator_id"];
-		if(raw_msg["sub_type"] == "approve")
-			this->sub_type = APPROVE;
-		else if(raw_msg["sub_type"] == "invite")
-			this->sub_type = INVITE;
+		raw_msg.get_to(*this);
 	}
 
 	void Event::GroupBanNotice::parse(){
-		this->time = this->raw_msg["time"];
-		this->self_id = raw_msg["self_id"];
-		this->group_id = raw_msg["group_id"];
-		this->user_id = raw_msg["user_id"];
-		this->operator_id = raw_msg["operator_id"];
-		this->duration = raw_msg["duration"];
-		this->sub_type = ( raw_msg["sub_type"] == "ban" ) ? BAN : LIFT_BAN;
+		raw_msg.get_to(*this);
 	}
 
 	void Event::FriendAddNotice::parse(){
-		this->time = this->raw_msg["time"];
-		this->self_id = raw_msg["self_id"];
-		this->user_id = raw_msg["user_id"];
+		raw_msg.get_to(*this);
 	}
-	
+
 	void Event::FriendRecallNotice::parse(){
-		this->time = this->raw_msg["time"];
-		this->self_id = raw_msg["self_id"];
-		this->user_id = raw_msg["user_id"];
-		this->message_id = raw_msg["message_id"];
+		raw_msg.get_to(*this);
 	}
 
 	void Event::GroupRecallNotice::parse(){
-		this->time = this->raw_msg["time"];
-		this->self_id = raw_msg["self_id"];
-		this->group_id = raw_msg["group_id"];
-		this->message_id = raw_msg["message_id"];
-		this->operator_id = raw_msg["operator_id"];
-		this->user_id = raw_msg["user_id"];
+		raw_msg.get_to(*this);
 	}
 
 	void Event::GroupNotifyNotice::parse(){
-		this->time = this->raw_msg["time"];
-		this->self_id = raw_msg["self_id"];
-		this->user_id = raw_msg["user_id"];
-		this->group_id = raw_msg["group_id"];
-		if(raw_msg["sub_type"] == "poke"){
-			this->sub_type = POKE;
-			this->target_id = raw_msg["target_id"];
-		} else if(raw_msg["sub_type"] == "lucky_king"){
-			this->sub_type = LUCKY_KING;
-			this->target_id = raw_msg["target_id"];
-		} else{
-			this->sub_type = HONOR;
-			if(raw_msg["honor_type"] == "talkative")
-				this->honor_type = TALKATIVE;
-			else if(raw_msg["honor_type"] == "performer")
-				this->honor_type = PERFORMER;
-			else if(raw_msg["honor_type"] == "emotion")
-				this->honor_type = EMOTION;
-		}
+		raw_msg.get_to(*this);
 	}
 };

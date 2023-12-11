@@ -9,6 +9,31 @@
 #include <nlohmann/json.hpp>
 #include <brynet/net/http/HttpService.hpp>
 
+namespace nlohmann {
+    template <typename T>
+    struct adl_serializer<std::optional<T>> {
+        static void to_json(json& j, const std::optional<T>& opt) {
+            if (opt == std::nullopt) {
+                j = nullptr;
+            }
+            else {
+                j = *opt; // this will call adl_serializer<T>::to_json which will
+                // find the free function to_json in T's namespace!
+            }
+        }
+
+        static void from_json(const json& j, std::optional<T>& opt) {
+            if (j.is_null()) {
+                opt = std::nullopt;
+            }
+            else {
+                opt = j.template get<T>(); // same as above, but with
+                // adl_serializer<T>::from_json
+            }
+        }
+    };
+}
+
 namespace twobot
 {
     using Session = brynet::net::http::HttpSession;
@@ -749,6 +774,8 @@ namespace twobot {
             {GroupDecreaseNotice::SUB_TYPE::KICK_ME, "kick_me"}
         })
 
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GroupDecreaseNotice, time, user_id, self_id, group_id, operator_id, sub_type)
+
         struct GroupInceaseNotice : EventBase{
             EventType getType() const override{
                 return {"notice", "group_increase"};
@@ -758,13 +785,20 @@ namespace twobot {
             uint64_t group_id; // 群QQ
             uint64_t user_id; // 用户QQ
             uint64_t operator_id; // 操作者QQ 如果是主动加群，和user_id一致
-            enum {
+            enum SUB_TYPE {
                 APPROVE, // 同意入群
                 INVITE,  // 邀请入群
             } sub_type; // 事件子类型，分别表示管理员已同意入群、管理员邀请入群
         protected:
             virtual void parse() override;
         };
+
+        NLOHMANN_JSON_SERIALIZE_ENUM(GroupInceaseNotice::SUB_TYPE, {
+            {GroupInceaseNotice::SUB_TYPE::APPROVE, "approve"},
+            {GroupInceaseNotice::SUB_TYPE::INVITE, "invite"}
+        })
+
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GroupInceaseNotice, time, user_id, self_id, group_id, operator_id, sub_type)
 
         struct GroupBanNotice : EventBase{
             EventType getType() const override{
@@ -776,13 +810,20 @@ namespace twobot {
             uint64_t user_id; // 被禁言的人的QQ
             uint64_t operator_id; // 操作者QQ 如果是主动禁言，和user_id一致
             uint64_t duration; //禁言时长，单位秒
-            enum {
+            enum SUB_TYPE {
                 BAN, // 禁言
                 LIFT_BAN, // 解除禁言
             } sub_type; // 事件子类型，分别表示禁言、解除禁言
         protected:
             virtual void parse() override;
         };
+
+        NLOHMANN_JSON_SERIALIZE_ENUM(GroupBanNotice::SUB_TYPE, {
+            {GroupBanNotice::SUB_TYPE::BAN, "ban"},
+            {GroupBanNotice::SUB_TYPE::LIFT_BAN, "lift_ban"}
+        })
+
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GroupBanNotice, time, user_id, self_id, group_id, operator_id, duration, sub_type)
 
         struct FriendAddNotice : EventBase{
             EventType getType() const override{
@@ -794,6 +835,8 @@ namespace twobot {
         protected:
             virtual void parse() override;
         };
+
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(FriendAddNotice, time, user_id, self_id)
 
         // 群消息撤回事件
         struct GroupRecallNotice : EventBase{
@@ -811,6 +854,8 @@ namespace twobot {
             virtual void parse() override;
         };
 
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GroupRecallNotice, time, user_id, self_id, group_id, message_id, operator_id)
+
         // 好友消息撤回事件
         struct FriendRecallNotice : EventBase{
             EventType getType() const override{
@@ -824,6 +869,8 @@ namespace twobot {
             virtual void parse() override;
         };
 
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(FriendRecallNotice, time, user_id, self_id, message_id)
+
         // 群内通知事件，如戳一戳、群红包运气王、群成员荣誉变更
         struct GroupNotifyNotice : EventBase{
             EventType getType() const override{
@@ -833,13 +880,13 @@ namespace twobot {
             uint64_t self_id; // 机器人自身QQ
             uint64_t group_id; // 群QQ
             uint64_t user_id; // 发送者QQ,如戳一戳的发送者，红包的发送者，荣誉变更者
-            enum {
+            enum SUB_TYPE {
                 POKE, //戳一戳
                 LUCKY_KING, //群红包运气王
                 HONOR, //群成员荣誉变更
             } sub_type; // 事件子类型，分别表示戳一戳、群红包运气王、群成员荣誉变更
             std::optional<uint64_t> target_id = std::nullopt; // 如果是戳一戳，则为被戳的人的QQ，如果是群红包运气王，则为群红包的ID
-            enum HonorType{
+            enum HonorType {
                 TALKATIVE, // 龙王
                 PERFORMER, // 群聊之火
                 EMOTION,   // 快乐源泉
@@ -847,7 +894,21 @@ namespace twobot {
             std::optional<HonorType> honor_type = std::nullopt; // 荣誉类型
         protected:
             virtual void parse() override;
-        };            
+        };
+
+        NLOHMANN_JSON_SERIALIZE_ENUM(GroupNotifyNotice::SUB_TYPE, {
+            {GroupNotifyNotice::SUB_TYPE::POKE, "poke"},
+            {GroupNotifyNotice::SUB_TYPE::LUCKY_KING, "lucky_king"},
+            {GroupNotifyNotice::SUB_TYPE::HONOR, "honor"}
+        })
+
+        NLOHMANN_JSON_SERIALIZE_ENUM(GroupNotifyNotice::HonorType, {
+            {GroupNotifyNotice::HonorType::TALKATIVE, "talkative"},
+            {GroupNotifyNotice::HonorType::PERFORMER, "performer"},
+            {GroupNotifyNotice::HonorType::EMOTION, "emotion"}
+        })
+
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GroupNotifyNotice, time, user_id, self_id, group_id, sub_type, target_id, honor_type)
     }
 
     /// BotInstance是一个机器人实例，机器人实例必须通过BotInstance::createInstance()创建
