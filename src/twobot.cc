@@ -59,7 +59,7 @@ namespace twobot {
 			const std::string& payload) {
 				try {
 					nlohmann::json json_payload = nlohmann::json::parse(payload);
-					
+
 					// 忽略心跳包
 					if(json_payload.contains("meta_event_type"))
 						if(json_payload["meta_event_type"] == "heartbeat")

@@ -51,6 +51,7 @@ namespace twobot
                 {"echo", std::clock()}
             };
             m_pSession->send(content);
+            result.first = true;
         }
         else
         {
@@ -75,15 +76,10 @@ namespace twobot
                 "application/json"
             );
 
-            if (http_result->status == 200) {
-                result.first = true;
-            }
-            else {
-                result.first = false;
-            }
+            result.first = (http_result->status == 200);
 
             try {
-                result.second = nlohmann::json::parse(http_result->body);
+                result.second = nlohmann::json::parse(http_result->body, nullptr, !result.first);
             }
             catch (const std::exception& e) {
                 result.second = nlohmann::json{
