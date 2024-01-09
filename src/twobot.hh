@@ -81,7 +81,7 @@ namespace twobot {
         bool testConnection();
         // 万api之母，负责提起所有的api的请求
         using ApiResult = std::pair<bool, nlohmann::json>;
-        ApiResult callApi(const std::string &api_name, const nlohmann::json &data);
+        ApiResult callApi(const std::string &api_name, const nlohmann::json &data) const;
 
         // 下面要实现onebot标准的所有api
 
@@ -590,7 +590,7 @@ namespace twobot {
         */
         ApiResult cleanCache();
     protected:
-        ApiSet (const Config &config);
+        ApiSet (const Config &config, const Session::Ptr& session = nullptr);
         Config config;
         Session::Ptr m_pSession;
         friend class BotInstance;
@@ -916,25 +916,25 @@ namespace twobot {
     struct BotInstance{
         // 消息类型
         // 消息回调函数原型
-        using Callback = std::function<void(const Event::EventBase &)>;
+        using Callback = std::function<void(const Event::EventBase &, const Session::Ptr &)>;
 
 
         // 创建机器人实例
         static std::unique_ptr<BotInstance> createInstance(const Config &config);
         
         // 获取Api集合
-        ApiSet& getApiSet(const Session::Ptr& session = nullptr);
+        ApiSet getApiSet(const Session::Ptr& session = nullptr);
         
         // 注册事件监听器
         template<class EventType>
-        void onEvent(std::function<void(const EventType &)> callback);
+        void onEvent(std::function<void(const EventType &, const Session::Ptr &)> callback);
 
         // [阻塞] 启动机器人
         void start();
 
         ~BotInstance() = default;
     protected:
-        ApiSet apiSet;
+        Config config;
         std::unordered_map<EventType, Callback> event_callbacks{};
     protected:
         explicit BotInstance(const Config &config);

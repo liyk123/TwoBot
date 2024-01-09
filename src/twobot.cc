@@ -21,23 +21,22 @@ namespace twobot {
 		return std::unique_ptr<BotInstance>(new BotInstance{config} );
 	}
 
-	ApiSet& BotInstance::getApiSet(const Session::Ptr& session) {
-		apiSet.bindSession(session);
-		return this->apiSet;
+	ApiSet BotInstance::getApiSet(const Session::Ptr& session) {
+		return {config, session};
 	}
 
-	BotInstance::BotInstance(const Config& config) :
-		apiSet(ApiSet{ config })
+	BotInstance::BotInstance(const Config& config) 
+		: config(config)
 	{
 
 	}
 
 	template<class EventType>
-	void BotInstance::onEvent(std::function<void(const EventType&)> callback) {
+	void BotInstance::onEvent(std::function<void(const EventType&, const Session::Ptr&)> callback) {
 		EventType event{};
-		this->event_callbacks[event.getType()] = Callback([callback](const Event::EventBase& event) {
+		this->event_callbacks[event.getType()] = Callback([callback](const Event::EventBase& event, const Session::Ptr& session) {
 			try{
-				callback(static_cast<const EventType&>(event));
+				callback(static_cast<const EventType&>(event), session);
 			}catch(const std::exception &e){
 				const auto & eventType = event.getType();
 				std::cerr << "EventType: {" << eventType.post_type << ", " << eventType.sub_type << "}\n";
@@ -50,9 +49,9 @@ namespace twobot {
 		using namespace brynet::base;
 		using namespace brynet::net;
 		using namespace brynet::net::http;
-		auto websocket_port = apiSet.config.ws_port;
+		auto websocket_port = config.ws_port;
 		auto service = IOThreadTcpService::Create();
-		service->startWorkerThread(1);
+		service->startWorkerThread(5);
 
 		auto ws_enter_callback = [this](const HttpSession::Ptr& httpSession,
 			WebSocketFormat::WebSocketFrameType opcode,
@@ -64,6 +63,9 @@ namespace twobot {
 					if(json_payload.contains("meta_event_type"))
 						if(json_payload["meta_event_type"] == "heartbeat")
 							return;
+
+					if (!json_payload.contains("post_type"))
+						return;
 
 					auto post_type = (std::string)json_payload["post_type"];
 
@@ -90,14 +92,14 @@ namespace twobot {
 						event_callbacks[event_type](
 							reinterpret_cast<const Event::EventBase&>(
 								*event
-							)
+							),
+							httpSession
 						);
 					}
 				}
 				catch (const std::exception& e) {
 					std::cerr << "WebSocket CallBack Exception: " << e.what() << std::endl;
 				}
-				httpSession->send("");
 
 		};
 
@@ -112,9 +114,10 @@ namespace twobot {
 			.WithEnterCallback([ws_enter_callback](const HttpSession::Ptr& httpSession, HttpSessionHandlers& handlers) {
 				handlers.setWSCallback(ws_enter_callback);
 				})
+            .WithReusePort()
 			.asyncRun()
 			;
-
+				
 		while (true)
 		{
 			std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -132,20 +135,20 @@ namespace twobot {
 		});
 
 		// 仅仅为了特化onEvent模板
-		instance->onEvent<Event::GroupMsg>([](const auto&) {});
-		instance->onEvent<Event::PrivateMsg>([](const auto&) {});
-		instance->onEvent<Event::EnableEvent>([](const auto&) {});
-		instance->onEvent<Event::DisableEvent>([](const auto&) {});
-		instance->onEvent<Event::ConnectEvent>([](const auto&) {});
-		instance->onEvent<Event::GroupUploadNotice>([](const auto&) {});
-		instance->onEvent<Event::GroupAdminNotice>([](const auto&) {});
-		instance->onEvent<Event::GroupDecreaseNotice>([](const auto&) {});
-		instance->onEvent<Event::GroupInceaseNotice>([](const auto&) {});
-		instance->onEvent<Event::GroupBanNotice>([](const auto&) {});
-		instance->onEvent<Event::FriendAddNotice>([](const auto&) {});
-		instance->onEvent<Event::GroupRecallNotice>([](const auto&) {});
-		instance->onEvent<Event::FriendRecallNotice>([](const auto&) {});
-		instance->onEvent<Event::GroupNotifyNotice>([](const auto&) {});
+		instance->onEvent<Event::GroupMsg>([](const auto&, const auto&) {});
+		instance->onEvent<Event::PrivateMsg>([](const auto&, const auto&) {});
+		instance->onEvent<Event::EnableEvent>([](const auto&, const auto&) {});
+		instance->onEvent<Event::DisableEvent>([](const auto&, const auto&) {});
+		instance->onEvent<Event::ConnectEvent>([](const auto&, const auto&) {});
+		instance->onEvent<Event::GroupUploadNotice>([](const auto&, const auto&) {});
+		instance->onEvent<Event::GroupAdminNotice>([](const auto&, const auto&) {});
+		instance->onEvent<Event::GroupDecreaseNotice>([](const auto&, const auto&) {});
+		instance->onEvent<Event::GroupInceaseNotice>([](const auto&, const auto&) {});
+		instance->onEvent<Event::GroupBanNotice>([](const auto&, const auto&) {});
+		instance->onEvent<Event::FriendAddNotice>([](const auto&, const auto&) {});
+		instance->onEvent<Event::GroupRecallNotice>([](const auto&, const auto&) {});
+		instance->onEvent<Event::FriendRecallNotice>([](const auto&, const auto&) {});
+		instance->onEvent<Event::GroupNotifyNotice>([](const auto&, const auto&) {});
 	}
 
 	std::unique_ptr<Event::EventBase> Event::EventBase::construct(const EventType& event) {

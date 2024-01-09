@@ -32,25 +32,26 @@ namespace twobot
         return response->status == 200;
     }
 
-    ApiSet::ApiSet(const Config & config) 
+    ApiSet::ApiSet(const Config & config, const Session::Ptr& session) 
         : config(config)
-        , m_pSession(nullptr)
+        , m_pSession(session)
     {
 
     }
 
-    ApiSet::ApiResult ApiSet::callApi(const std::string &api_name, const nlohmann::json &data) {
+    ApiSet::ApiResult ApiSet::callApi(const std::string &api_name, const nlohmann::json &data) const{
         ApiResult result{false, {}};
 
-        if (m_pSession.get()) 
+        if (m_pSession) 
         {
             nlohmann::json content = 
             {
-                {"action", api_name},
+                {"action", api_name.substr(1)},
                 {"params", data},
                 {"echo", std::clock()}
             };
-            m_pSession->send(content);
+            auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
+            m_pSession->send(std::move(wsFrame));
             result.first = true;
         }
         else
