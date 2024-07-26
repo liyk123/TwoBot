@@ -36,16 +36,16 @@ namespace twobot
         : config(config)
         , m_pSession(session)
     {
-
+        
     }
 
-    ApiSet::ApiResult ApiSet::callApi(const std::string &api_name, const nlohmann::json &data) const{
+    ApiSet::ApiResult ApiSet::callApi(const std::string &api_name, const nlohmann::json &data) {
         ApiResult result{false, {}};
 
         if (m_pSession) 
         {
             nlohmann::json content = 
-            {
+            { 
                 {"action", api_name.substr(1)},
                 {"params", data},
                 {"echo", std::clock()}
@@ -58,7 +58,7 @@ namespace twobot
         {
             httplib::Client client(config.host, config.api_port);
             httplib::Headers headers = {
-               {"Content-Type", "application/json"}
+                {"Content-Type", "application/json"}
             };
             if (config.token.has_value()) {
                 headers.insert(

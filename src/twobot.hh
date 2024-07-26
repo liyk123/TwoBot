@@ -51,6 +51,15 @@ namespace twobot
     };
 };
 
+namespace twobot
+{
+    template<typename T>
+    std::ostream& operator<<(typename std::enable_if<std::is_enum<T>::value, std::ostream>::type& stream, const T& e)
+    {
+        return stream << static_cast<typename std::underlying_type<T>::type>(e);
+    }
+}
+
 namespace std{
     template<>
     struct hash<twobot::EventType> {
@@ -81,7 +90,7 @@ namespace twobot {
         bool testConnection();
         // 万api之母，负责提起所有的api的请求
         using ApiResult = std::pair<bool, nlohmann::json>;
-        ApiResult callApi(const std::string &api_name, const nlohmann::json &data) const;
+        ApiResult callApi(const std::string &api_name, const nlohmann::json &data);
 
         // 下面要实现onebot标准的所有api
 
@@ -708,6 +717,21 @@ namespace twobot {
         };
 
         NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ConnectEvent, time, self_id)
+
+        // WS调用API返回事件
+        struct CallbackEvent : EventBase {
+            EventType getType() const override {
+                return { "meta_event", "callback" };
+            }
+            uint64_t time; // 事件产生的时间
+            uint64_t self_id; // 机器人自身QQ
+            std::string api_name;
+            nlohmann::json ret;
+            protected:
+                virtual void parse() override;
+        };
+
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CallbackEvent, time, self_id)
 
         struct GroupUploadNotice : EventBase{
             EventType getType() const override{

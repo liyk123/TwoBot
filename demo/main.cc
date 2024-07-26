@@ -10,6 +10,15 @@ using twobot::ApiSet;
 using namespace twobot::Event;
 using twobot::Session;
 
+inline static std::string getRealID(const std::unique_ptr<twobot::BotInstance> &instance, uint64_t vid)
+{
+	std::string realID = "";
+    const auto& r = instance->getApiSet().callApi("/getid", { { "type", 2 },{ "id", vid } });
+    //std::cout << r.second.dump(4);
+    realID = r.second.value("id", realID);
+    return realID;
+}
+
 int main(int argc, char** args) {
     // 解决UTF8编码，中文乱码问题，不需要可以不加
 #ifdef _WIN32
@@ -44,6 +53,19 @@ int main(int argc, char** args) {
             r = instance->getApiSet(session).getGroupMemberList(msg.group_id);
             instance->getApiSet().sendGroupMsg(msg.group_id, "获取成功");
         }
+        else if (msg.raw_message == "getAvatar")
+        {
+            std::string group_id = getRealID(instance, msg.group_id);
+            std::string user_id = getRealID(instance, msg.user_id);
+			nlohmann::json param = {
+                {"group_id", group_id},
+                {"user_id", user_id}
+            };
+            r = instance->getApiSet().callApi("/get_avatar", param);
+			if (r.second != nullptr) {
+                instance->getApiSet().sendGroupMsg(msg.group_id, r.second.dump(4));
+            }
+        }
         std::cout << r.second.dump(4) << std::endl;
     });
 
@@ -51,7 +73,7 @@ int main(int argc, char** args) {
         if (msg.raw_message == "你好")
         {
             ApiSet set = instance->getApiSet(session);
-            auto &r = set.sendPrivateMsg(msg.user_id, "你好，我是twobot！");
+            const auto &r = set.sendPrivateMsg(msg.user_id, "你好，我是twobot！");
             std::cout << r << std::endl;
         }
     });

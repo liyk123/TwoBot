@@ -58,6 +58,8 @@ namespace twobot {
 			const std::string& payload) {
 				try {
 					nlohmann::json json_payload = nlohmann::json::parse(payload);
+					std::string post_type;
+					std::string sub_type;
 
 					// 忽略心跳包
 					if(json_payload.contains("meta_event_type"))
@@ -65,17 +67,23 @@ namespace twobot {
 							return;
 
 					if (!json_payload.contains("post_type"))
-						return;
+					{
+						std::cout << "opcode: " << opcode << "\n" << payload << std::endl;
+						post_type = "meta_event";
+						sub_type = "callback";
+					}
+					else
+					{
+						post_type = (std::string)json_payload["post_type"];
 
-					auto post_type = (std::string)json_payload["post_type"];
-
-					std::string sub_type;
-					if (post_type == "message")
-						sub_type = (std::string)json_payload["message_type"];
-					else if(post_type == "meta_event")
-						sub_type = (std::string)json_payload["sub_type"];
-					else if(post_type == "notice")
-						sub_type = (std::string)json_payload["notice_type"];
+						if (post_type == "message")
+							sub_type = (std::string)json_payload["message_type"];
+						else if (post_type == "meta_event")
+							sub_type = (std::string)json_payload["sub_type"];
+						else if (post_type == "notice")
+							sub_type = (std::string)json_payload["notice_type"];
+					}
+					
 
 					EventType event_type = {
 						post_type,
@@ -140,6 +148,7 @@ namespace twobot {
 		instance->onEvent<Event::EnableEvent>([](const auto&, const auto&) {});
 		instance->onEvent<Event::DisableEvent>([](const auto&, const auto&) {});
 		instance->onEvent<Event::ConnectEvent>([](const auto&, const auto&) {});
+		instance->onEvent<Event::CallbackEvent>([](const auto&, const auto&) {});
 		instance->onEvent<Event::GroupUploadNotice>([](const auto&, const auto&) {});
 		instance->onEvent<Event::GroupAdminNotice>([](const auto&, const auto&) {});
 		instance->onEvent<Event::GroupDecreaseNotice>([](const auto&, const auto&) {});
@@ -165,6 +174,10 @@ namespace twobot {
 				return std::unique_ptr<Event::EventBase>(new Event::DisableEvent());
 			}else if(event.sub_type == "connect"){
 				return std::unique_ptr<Event::EventBase>(new Event::ConnectEvent());
+			}
+			else if (event.sub_type == "callback")
+			{
+				return std::make_unique<Event::CallbackEvent>();
 			}
 		} else if(event.post_type == "notice"){
 			if(event.sub_type == "group_upload"){
@@ -207,6 +220,10 @@ namespace twobot {
 	}
 
 	void Event::ConnectEvent::parse(){
+		raw_msg.get_to(*this);
+	}
+
+	void Event::CallbackEvent::parse() {
 		raw_msg.get_to(*this);
 	}
 
