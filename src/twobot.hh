@@ -599,9 +599,10 @@ namespace twobot {
         */
         ApiResult cleanCache();
     protected:
-        ApiSet (const Config &config, const Session::Ptr& session = nullptr);
+        ApiSet (const Config &config, const Session::Ptr& session = nullptr, const bool &isPost = true);
         Config config;
         Session::Ptr m_pSession;
+        bool m_isPost;
         friend class BotInstance;
     };
 
@@ -947,7 +948,11 @@ namespace twobot {
         static std::unique_ptr<BotInstance> createInstance(const Config &config);
         
         // 获取Api集合
-        ApiSet getApiSet(const Session::Ptr& session = nullptr);
+        ApiSet getApiSet(const Session::Ptr& session, const bool& isPost);
+
+        ApiSet getApiSet(const Session::Ptr& session);
+
+        ApiSet getApiSet(const bool& isPost = true);
         
         // 注册事件监听器
         template<class EventType>

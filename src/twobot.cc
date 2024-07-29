@@ -1,4 +1,6 @@
 #include "twobot.hh"
+#include "twobot.hh"
+#include "twobot.hh"
 #include <nlohmann/json.hpp>
 #include <cstdint>
 #include <exception>
@@ -21,8 +23,18 @@ namespace twobot {
 		return std::unique_ptr<BotInstance>(new BotInstance{config} );
 	}
 
-	ApiSet BotInstance::getApiSet(const Session::Ptr& session) {
-		return {config, session};
+	ApiSet BotInstance::getApiSet(const Session::Ptr& session, const bool& isPost) {
+		return {config, session, isPost};
+	}
+
+	ApiSet BotInstance::getApiSet(const Session::Ptr& session)
+	{
+		return getApiSet(session, true);
+	}
+
+	ApiSet BotInstance::getApiSet(const bool& isPost)
+	{
+		return getApiSet(nullptr, isPost);
 	}
 
 	BotInstance::BotInstance(const Config& config) 

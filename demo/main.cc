@@ -10,11 +10,10 @@ using twobot::ApiSet;
 using namespace twobot::Event;
 using twobot::Session;
 
-inline static std::string getRealID(const std::unique_ptr<twobot::BotInstance> &instance, uint64_t vid)
+static inline std::string getRealID(const std::unique_ptr<twobot::BotInstance> &instance, uint64_t vid)
 {
 	std::string realID = "";
-    const auto& r = instance->getApiSet().callApi("/getid", { { "type", 2 },{ "id", vid } });
-    //std::cout << r.second.dump(4);
+    const auto& r = instance->getApiSet(nullptr, true).callApi("/getid", { { "type", 2 },{ "id", vid } });
     realID = r.second.value("id", realID);
     return realID;
 }
@@ -33,7 +32,7 @@ int main(int argc, char** args) {
     auto instance = BotInstance::createInstance(config);
 
 
-    if(!instance->getApiSet().testConnection()){
+    if(!instance->getApiSet(nullptr, true).testConnection()){
         std::cerr << "测试连接失败，请启动onebot服务器，并配置HTTP端口！" << std::endl;
     }
 

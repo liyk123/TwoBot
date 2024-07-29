@@ -13,28 +13,13 @@ namespace twobot
     }
 
     bool ApiSet::testConnection() {
-        httplib::Client client(config.host, config.api_port);
-        httplib::Headers headers = {
-            {"Content-Type", "application/json"}
-        };
-        if(config.token.has_value()) {
-            headers.insert(
-                std::make_pair(
-                    std::string{"Authorization"} ,
-                    "Bearer " + *config.token
-                    )
-            );
-        }
-
-        auto response = client.Get("/get_version_info", headers);
-        if(!response)
-            return false;
-        return response->status == 200;
+        return callApi("/get_version_info", {}).first;
     }
 
-    ApiSet::ApiSet(const Config & config, const Session::Ptr& session) 
+    ApiSet::ApiSet(const Config & config, const Session::Ptr& session, const bool &isPost) 
         : config(config)
         , m_pSession(session)
+        , m_isPost(isPost)
     {
         
     }
@@ -48,11 +33,13 @@ namespace twobot
             { 
                 {"action", api_name.substr(1)},
                 {"params", data},
-                {"echo", std::clock()}
             };
+            content["echo"] = content;
+            content["echo"]["time"] = std::clock();
             auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
             m_pSession->send(std::move(wsFrame));
             result.first = true;
+            result.second = content["echo"];
         }
         else
         {
@@ -68,19 +55,26 @@ namespace twobot
                     )
                 );
             }
+            httplib::Response response;
 
+            if (m_isPost) 
+            {
+                response = client.Post(
+                    api_name,
+                    headers,
+                    data.dump(),
+                    "application/json"
+                ).value();
+            }
+            else
+            {
+                response = client.Get(api_name, data, headers).value();
+            }
 
-            auto http_result = client.Post(
-                api_name,
-                headers,
-                data.dump(),
-                "application/json"
-            );
-
-            result.first = (http_result->status == 200);
+            result.first = (response.status == 200);
 
             try {
-                result.second = nlohmann::json::parse(http_result->body, nullptr, !result.first);
+                result.second = nlohmann::json::parse(response.body, nullptr, !result.first);
             }
             catch (const std::exception& e) {
                 result.second = nlohmann::json{
