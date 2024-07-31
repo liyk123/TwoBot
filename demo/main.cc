@@ -32,7 +32,7 @@ int main(int argc, char** args) {
     auto instance = BotInstance::createInstance(config);
 
 
-    if(!instance->getApiSet(nullptr, true).testConnection()){
+    if(!instance->getApiSet(false).testConnection()){
         std::cerr << "测试连接失败，请启动onebot服务器，并配置HTTP端口！" << std::endl;
     }
 

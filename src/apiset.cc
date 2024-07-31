@@ -13,7 +13,7 @@ namespace twobot
     }
 
     bool ApiSet::testConnection() {
-        return callApi("/get_version_info", {}).first;
+        return callApi("/get_version_info", nlohmann::json({ {} })).first;
     }
 
     ApiSet::ApiSet(const Config & config, const Session::Ptr& session, const bool &isPost) 
@@ -55,20 +55,27 @@ namespace twobot
                     )
                 );
             }
-            httplib::Response response;
+            httplib::Response response = {};
 
             if (m_isPost) 
             {
-                response = client.Post(
+                auto r = client.Post(
                     api_name,
                     headers,
                     data.dump(),
                     "application/json"
-                ).value();
+                );
+                if (r != nullptr) {
+                    response = *r;
+                }
             }
             else
             {
-                response = client.Get(api_name, data, headers).value();
+                httplib::Params params = data;
+                auto r = client.Get(api_name, params, headers);
+                if (r != nullptr) {
+                    response = *r;
+                }
             }
 
             result.first = (response.status == 200);
