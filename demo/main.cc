@@ -1,5 +1,6 @@
 ﻿#include <twobot.hh>
 #include <iostream>
+#include <httplib.h>
 
 /// 警告: 这个项目使用了JSON for modern C++, 必须使用UTF8编码，不然会出现异常。
 /// warning: this project uses JSON for modern C++, must use UTF8 encoding, otherwise it will throw exception.
@@ -10,11 +11,24 @@ using twobot::ApiSet;
 using namespace twobot::Event;
 using twobot::Session;
 
-static inline std::string getRealID(const std::unique_ptr<twobot::BotInstance> &instance, uint64_t vid)
+static inline std::string getRealID(uint64_t vid)
 {
 	std::string realID = "";
-    const auto& r = instance->getApiSet(nullptr, true).callApi("/getid", { { "type", 2 },{ "id", vid } });
-    realID = r.second.value("id", realID);
+    std::stringstream ss;
+    ss << vid;
+    nlohmann::json data = {
+        { "type", "2"},
+        { "id", ss.str()}
+    };
+    httplib::Client client("http://10.8.0.1:9444");
+    auto r = client.Get("/getid", httplib::Params(data), {});
+    //const auto& r = instance->getApiSet(false).callApi("/getid", data);
+    if (r != nullptr)
+    {
+        auto ret = nlohmann::json::parse(r->body);
+        std::cout << ret.dump() << std::endl;
+        realID = ret.value("id", realID);
+    }
     return realID;
 }
 
@@ -26,14 +40,18 @@ int main(int argc, char** args) {
     Config config = {
         "10.8.0.1",
         5700,
-        9444,
-        ""
+        9444
     };
     auto instance = BotInstance::createInstance(config);
 
 
-    if(!instance->getApiSet(false).testConnection()){
-        std::cerr << "测试连接失败，请启动onebot服务器，并配置HTTP端口！" << std::endl;
+    if(!instance->getApiSet(false).testConnection())
+    {
+        std::cerr << "HTTP测试失败，请启动onebot服务器，并配置HTTP端口！" << std::endl;
+    }
+    else
+    {
+        std::cout << "HTTP测试通过!" << std::endl;
     }
 
     instance->onEvent<GroupMsg>([&instance](const GroupMsg & msg, const Session::Ptr& session){
@@ -54,11 +72,11 @@ int main(int argc, char** args) {
         }
         else if (msg.raw_message == "getAvatar")
         {
-            std::string group_id = getRealID(instance, msg.group_id);
-            std::string user_id = getRealID(instance, msg.user_id);
+            std::string group_id = getRealID(msg.group_id);
+            std::string user_id = getRealID(msg.user_id);
 			nlohmann::json param = {
-                {"group_id", group_id},
-                {"user_id", user_id}
+                {"group_id", "B6240B4B49D1EAC79F423C7C39D5D460"},
+                {"user_id", "CCBEAF4DD759BE6C3580672243972A69"}
             };
             r = instance->getApiSet().callApi("/get_avatar", param);
 			if (r.second != nullptr) {
