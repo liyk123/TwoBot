@@ -14,6 +14,7 @@
 #include <brynet/net/http/WebSocketFormat.hpp>
 #include <brynet/net/wrapper/HttpServiceBuilder.hpp>
 #include <brynet/net/wrapper/ServiceBuilder.hpp>
+#include <brynet/base/AppStatus.hpp>
 
 namespace twobot {
 	std::unique_ptr<BotInstance> BotInstance::createInstance(const Config& config) {
@@ -135,7 +136,7 @@ namespace twobot {
 			.asyncRun()
 			;
 				
-		while (true)
+		while (!brynet::base::app_kbhit())
 		{
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
