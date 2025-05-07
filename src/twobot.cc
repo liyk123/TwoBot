@@ -1,6 +1,4 @@
 #include "twobot.hh"
-#include "twobot.hh"
-#include "twobot.hh"
 #include <nlohmann/json.hpp>
 #include <cstdint>
 #include <exception>
@@ -12,7 +10,6 @@
 #endif
 
 #include <httplib.h>
-#include <nlohmann/json.hpp>
 #include <brynet/base/Packet.hpp>
 #include <brynet/net/http/WebSocketFormat.hpp>
 #include <brynet/net/wrapper/HttpServiceBuilder.hpp>
@@ -140,7 +137,7 @@ namespace twobot {
 				
 		while (true)
 		{
-			std::this_thread::sleep_for(std::chrono::seconds(1));
+			std::this_thread::yield();
 		}
 	}
 
