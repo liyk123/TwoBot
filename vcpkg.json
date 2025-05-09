@@ -1,0 +1,8 @@
+{
+  "dependencies": [
+    "brynet",
+    "cpp-httplib",
+    "openssl",
+    "nlohmann-json"
+  ]
+}
