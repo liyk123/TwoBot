@@ -75,6 +75,10 @@ int main(int argc, char** args) {
         std::cout << r.second.dump() << std::endl;
     });
 
+    instance->onEvent<CallbackEvent>([&instance](const CallbackEvent& msg, const Session::Ptr& session) {
+        std::cout << msg.echo.dump() << "\n" << msg.data.dump() << std::endl;
+    });
+
 
     instance->onEvent<EnableEvent>([&instance](const EnableEvent & msg, const Session::Ptr& session){
         std::cout << "twobot已启动！机器人QQ："<< msg.self_id << std::endl;

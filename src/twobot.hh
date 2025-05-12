@@ -726,13 +726,13 @@ namespace twobot {
             }
             uint64_t time; // 事件产生的时间
             uint64_t self_id; // 机器人自身QQ
-            std::string api_name;
-            nlohmann::json ret;
+            nlohmann::json data;
+            nlohmann::json echo;
             protected:
                 virtual void parse() override;
         };
 
-        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CallbackEvent, time, self_id)
+        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CallbackEvent, time, self_id, data, echo)
 
         struct GroupUploadNotice : EventBase{
             EventType getType() const override{

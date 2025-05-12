@@ -78,7 +78,6 @@ namespace twobot {
 
 					if (!json_payload.contains("post_type"))
 					{
-						std::cout << "opcode: " << opcode << "\n" << payload << std::endl;
 						post_type = "meta_event";
 						sub_type = "callback";
 					}
@@ -127,7 +126,7 @@ namespace twobot {
 			.AddSocketProcess([](TcpSocket& socket) {
 			socket.setNodelay();
 				})
-			.WithMaxRecvBufferSize(10240)
+			.WithMaxRecvBufferSize(static_cast<size_t>(1024 * 1024 * 4))
 			.WithAddr(false, "0.0.0.0", websocket_port)
 			.WithEnterCallback([ws_enter_callback](const HttpSession::Ptr& httpSession, HttpSessionHandlers& handlers) {
 				handlers.setWSCallback(ws_enter_callback);
