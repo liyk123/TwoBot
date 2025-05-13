@@ -8,6 +8,7 @@ add_library(TwoBot STATIC
         src/twobot.hh
         src/twobot.cc
         src/apiset.cc
+        src/ThreadSafeMap.hh
 )
 
 target_include_directories(TwoBot PUBLIC src/)
