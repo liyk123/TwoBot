@@ -61,7 +61,7 @@ namespace twobot {
 		using namespace brynet::net::http;
 		auto websocket_port = config.ws_port;
 		auto service = IOThreadTcpService::Create();
-		service->startWorkerThread(5);
+		service->startWorkerThread(std::thread::hardware_concurrency());
 
 		auto ws_enter_callback = [this](const HttpSession::Ptr& httpSession,
 			WebSocketFormat::WebSocketFrameType opcode,

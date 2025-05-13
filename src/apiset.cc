@@ -6,6 +6,8 @@
 
 namespace twobot 
 {
+    extern std::atomic<std::size_t> g_seq = 0;
+
     void ApiSet::bindSession(const Session::Ptr& pSession)
     {
         m_pSession = pSession;
@@ -33,8 +35,7 @@ namespace twobot
                 {"action", api_name.substr(1)},
                 {"params", data},
             };
-            content["echo"] = content;
-            content["echo"]["time"] = std::clock();
+            content["echo"]["seq"] = g_seq++;
             auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
             m_pSession->send(std::move(wsFrame));
             result.first = true;
