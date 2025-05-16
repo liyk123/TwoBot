@@ -37,6 +37,7 @@ namespace twobot {
 
 	BotInstance::BotInstance(const Config& config) 
 		: config(config)
+		, m_hashMap()
 	{
 
 	}
@@ -45,13 +46,18 @@ namespace twobot {
 	void BotInstance::onEvent(std::function<void(const EventType&, const Session::Ptr&)> callback) {
 		EventType event{};
 		this->event_callbacks[event.getType()] = Callback([callback](const Event::EventBase& event, const Session::Ptr& session) {
-			try{
-				callback(static_cast<const EventType&>(event), session);
-			}catch(const std::exception &e){
-				const auto & eventType = event.getType();
-				std::cerr << "EventType: {" << eventType.post_type << ", " << eventType.sub_type << "}\n";
-				std::cerr << "\tBotInstance::onEvent error: " << e.what() << std::endl;
-			}
+			return std::async(std::launch::async, [&callback, &event, &session] {
+				try
+				{
+					callback(static_cast<const EventType&>(event), session);
+				}
+				catch (const std::exception& e)
+				{
+					const auto& eventType = event.getType();
+					std::cerr << "EventType: {" << eventType.post_type << ", " << eventType.sub_type << "}\n";
+					std::cerr << "\tBotInstance::onEvent error: " << e.what() << std::endl;
+				}
+			});
 		});
 	}
 
@@ -61,7 +67,7 @@ namespace twobot {
 		using namespace brynet::net::http;
 		auto websocket_port = config.ws_port;
 		auto service = IOThreadTcpService::Create();
-		service->startWorkerThread(std::thread::hardware_concurrency());
+		service->startWorkerThread(std::thread::hardware_concurrency(), [](const EventLoop::Ptr& loop) { loop->runAsyncFunctor([]{}); });
 
 		auto ws_enter_callback = [this](const HttpSession::Ptr& httpSession,
 			WebSocketFormat::WebSocketFrameType opcode,
@@ -76,22 +82,21 @@ namespace twobot {
 						if(json_payload["meta_event_type"] == "heartbeat")
 							return;
 
-					if (!json_payload.contains("post_type"))
+					if (!json_payload.contains("post_type") && json_payload.contains("echo"))
 					{
-						post_type = "meta_event";
-						sub_type = "callback";
+						std::size_t seq = json_payload["echo"]["seq"].get<std::size_t>();
+						m_hashMap.emplace(seq, json_payload["data"]);
+						return;
 					}
-					else
-					{
-						post_type = (std::string)json_payload["post_type"];
 
-						if (post_type == "message")
-							sub_type = (std::string)json_payload["message_type"];
-						else if (post_type == "meta_event")
-							sub_type = (std::string)json_payload["sub_type"];
-						else if (post_type == "notice")
-							sub_type = (std::string)json_payload["notice_type"];
-					}
+					post_type = (std::string)json_payload["post_type"];
+
+					if (post_type == "message")
+						sub_type = (std::string)json_payload["message_type"];
+					else if (post_type == "meta_event")
+						sub_type = (std::string)json_payload["sub_type"];
+					else if (post_type == "notice")
+						sub_type = (std::string)json_payload["notice_type"];
 					
 
 					EventType event_type = {
@@ -105,8 +110,9 @@ namespace twobot {
 					event->raw_msg = nlohmann::json::parse(payload);
 					event->parse();
 
+					std::future<void> task;
 					if (event_callbacks.count(event_type) != 0) {
-						event_callbacks[event_type](
+						task = event_callbacks[event_type](
 							reinterpret_cast<const Event::EventBase&>(
 								*event
 							),
@@ -139,6 +145,17 @@ namespace twobot {
 		{
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
+	}
+
+	nlohmann::json BotInstance::getApiResult(const std::size_t& seq)
+	{
+		std::optional<nlohmann::json> ret;
+		while ((ret = m_hashMap.find(seq)) == std::nullopt)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+		}
+		m_hashMap.erase(seq);
+		return *ret;
 	}
 
 

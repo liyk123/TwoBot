@@ -8,6 +8,8 @@
 #include <functional>
 #include <nlohmann/json.hpp>
 #include <brynet/net/http/HttpService.hpp>
+#include <future>
+#include "ThreadSafedUnorderedMap.hh"
 
 namespace nlohmann {
     template <typename T>
@@ -941,7 +943,7 @@ namespace twobot {
     struct BotInstance{
         // 消息类型
         // 消息回调函数原型
-        using Callback = std::function<void(const Event::EventBase &, const Session::Ptr &)>;
+        using Callback = std::function<std::future<void>(const Event::EventBase &, const Session::Ptr &)>;
 
 
         // 创建机器人实例
@@ -961,10 +963,14 @@ namespace twobot {
         // [阻塞] 启动机器人
         void start();
 
+        // [阻塞] 获取异步API的调用结果
+        nlohmann::json getApiResult(const std::size_t& seq);
+
         ~BotInstance() = default;
     protected:
         Config config;
         std::unordered_map<EventType, Callback> event_callbacks{};
+        ThreadSafedUnorderedMap<std::size_t, nlohmann::json> m_hashMap;
     protected:
         explicit BotInstance(const Config &config);
 
