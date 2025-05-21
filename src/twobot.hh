@@ -721,21 +721,6 @@ namespace twobot {
 
         NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ConnectEvent, time, self_id)
 
-        // WS调用API返回事件
-        struct CallbackEvent : EventBase {
-            EventType getType() const override {
-                return { "meta_event", "callback" };
-            }
-            uint64_t time; // 事件产生的时间
-            uint64_t self_id; // 机器人自身QQ
-            nlohmann::json data;
-            nlohmann::json echo;
-            protected:
-                virtual void parse() override;
-        };
-
-        NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CallbackEvent, time, self_id, data, echo)
-
         struct GroupUploadNotice : EventBase{
             EventType getType() const override{
                 return {"notice", "group_upload"};
@@ -943,7 +928,7 @@ namespace twobot {
     struct BotInstance{
         // 消息类型
         // 消息回调函数原型
-        using Callback = std::function<std::future<void>(const Event::EventBase &, const Session::Ptr &)>;
+        using Callback = std::function<void(const Event::EventBase &, const Session::Ptr &)>;
 
 
         // 创建机器人实例

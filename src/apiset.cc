@@ -35,11 +35,15 @@ namespace twobot
                 {"action", api_name.substr(1)},
                 {"params", data},
             };
-            content["echo"]["seq"] = g_seq++;
+            std::size_t seq = g_seq++;
+            if (m_isPost) 
+            {
+                content["echo"]["seq"] = seq;
+                result.second = content["echo"];
+            }
             auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
             m_pSession->send(std::move(wsFrame));
             result.first = true;
-            result.second = content["echo"];
         }
         else
         {

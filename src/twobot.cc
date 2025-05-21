@@ -27,7 +27,7 @@ namespace twobot {
 
 	ApiSet BotInstance::getApiSet(const Session::Ptr& session)
 	{
-		return getApiSet(session, true);
+		return getApiSet(session, false);
 	}
 
 	ApiSet BotInstance::getApiSet(const bool& isPost)
@@ -46,18 +46,13 @@ namespace twobot {
 	void BotInstance::onEvent(std::function<void(const EventType&, const Session::Ptr&)> callback) {
 		EventType event{};
 		this->event_callbacks[event.getType()] = Callback([callback](const Event::EventBase& event, const Session::Ptr& session) {
-			return std::async(std::launch::async, [&callback, &event, &session] {
-				try
-				{
-					callback(static_cast<const EventType&>(event), session);
-				}
-				catch (const std::exception& e)
-				{
-					const auto& eventType = event.getType();
-					std::cerr << "EventType: {" << eventType.post_type << ", " << eventType.sub_type << "}\n";
-					std::cerr << "\tBotInstance::onEvent error: " << e.what() << std::endl;
-				}
-			});
+			try{
+				callback(static_cast<const EventType&>(event), session);
+			}catch(const std::exception &e){
+				const auto & eventType = event.getType();
+				std::cerr << "EventType: {" << eventType.post_type << ", " << eventType.sub_type << "}\n";
+				std::cerr << "\tBotInstance::onEvent error: " << e.what() << std::endl;
+			}
 		});
 	}
 
@@ -82,7 +77,7 @@ namespace twobot {
 						if(json_payload["meta_event_type"] == "heartbeat")
 							return;
 
-					if (!json_payload.contains("post_type") && json_payload.contains("echo"))
+					if (!json_payload.contains("post_type") && json_payload.contains("echo") && json_payload["echo"].contains("seq"))
 					{
 						std::size_t seq = json_payload["echo"]["seq"].get<std::size_t>();
 						m_hashMap.emplace(seq, json_payload["data"]);
@@ -110,9 +105,8 @@ namespace twobot {
 					event->raw_msg = nlohmann::json::parse(payload);
 					event->parse();
 
-					std::future<void> task;
 					if (event_callbacks.count(event_type) != 0) {
-						task = event_callbacks[event_type](
+						event_callbacks[event_type](
 							reinterpret_cast<const Event::EventBase&>(
 								*event
 							),
@@ -174,7 +168,6 @@ namespace twobot {
 		instance->onEvent<Event::EnableEvent>([](const auto&, const auto&) {});
 		instance->onEvent<Event::DisableEvent>([](const auto&, const auto&) {});
 		instance->onEvent<Event::ConnectEvent>([](const auto&, const auto&) {});
-		instance->onEvent<Event::CallbackEvent>([](const auto&, const auto&) {});
 		instance->onEvent<Event::GroupUploadNotice>([](const auto&, const auto&) {});
 		instance->onEvent<Event::GroupAdminNotice>([](const auto&, const auto&) {});
 		instance->onEvent<Event::GroupDecreaseNotice>([](const auto&, const auto&) {});
@@ -200,10 +193,6 @@ namespace twobot {
 				return std::unique_ptr<Event::EventBase>(new Event::DisableEvent());
 			}else if(event.sub_type == "connect"){
 				return std::unique_ptr<Event::EventBase>(new Event::ConnectEvent());
-			}
-			else if (event.sub_type == "callback")
-			{
-				return std::make_unique<Event::CallbackEvent>();
 			}
 		} else if(event.post_type == "notice"){
 			if(event.sub_type == "group_upload"){
@@ -246,10 +235,6 @@ namespace twobot {
 	}
 
 	void Event::ConnectEvent::parse(){
-		raw_msg.get_to(*this);
-	}
-
-	void Event::CallbackEvent::parse() {
 		raw_msg.get_to(*this);
 	}
 

@@ -15,6 +15,9 @@ int main(int argc, char** args) {
 #ifdef _WIN32
     system("chcp 65001 && cls");
 #endif
+    const char* localeName = "zh_CN.UTF-8";
+    std::setlocale(LC_ALL, localeName);
+    std::locale::global(std::locale(localeName));
     Config config = {
         "10.8.0.1",
         5700,
@@ -74,11 +77,6 @@ int main(int argc, char** args) {
         }
         std::cout << r.second.dump() << std::endl;
     });
-
-    instance->onEvent<CallbackEvent>([&instance](const CallbackEvent& msg, const Session::Ptr& session) {
-        std::cout << msg.echo.dump() << "\n" << msg.data.dump() << std::endl;
-    });
-
 
     instance->onEvent<EnableEvent>([&instance](const EnableEvent & msg, const Session::Ptr& session){
         std::cout << "twobot已启动！机器人QQ："<< msg.self_id << std::endl;
