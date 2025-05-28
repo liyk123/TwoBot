@@ -7,8 +7,6 @@
 #include <unordered_map>
 #include <functional>
 #include <nlohmann/json.hpp>
-#include <brynet/net/http/HttpService.hpp>
-#include <future>
 #include "ThreadSafedUnorderedMap.hh"
 
 namespace nlohmann {
@@ -34,11 +32,6 @@ namespace nlohmann {
             }
         }
     };
-}
-
-namespace twobot
-{
-    using Session = brynet::net::http::HttpSession;
 }
 
 namespace twobot
@@ -87,7 +80,7 @@ namespace twobot {
     // Api集合，所有对机器人调用的接口都在这里
     struct ApiSet{
         
-        void bindSession(const Session::Ptr& pSession);
+        void bindSession(void* pSession);
 
         bool testConnection();
         // 万api之母，负责提起所有的api的请求
@@ -601,9 +594,9 @@ namespace twobot {
         */
         ApiResult cleanCache();
     protected:
-        ApiSet (const Config &config, const Session::Ptr& session = nullptr, const bool &isPost = true);
+        ApiSet (const Config &config, void *session = nullptr, const bool &isPost = true);
         Config config;
-        Session::Ptr m_pSession;
+        void* m_pSession;
         bool m_isPost;
         friend class BotInstance;
     };
@@ -928,22 +921,22 @@ namespace twobot {
     struct BotInstance{
         // 消息类型
         // 消息回调函数原型
-        using Callback = std::function<void(const Event::EventBase &, const Session::Ptr &)>;
+		using Callback = std::function<void(const Event::EventBase&, void*)>;
 
 
         // 创建机器人实例
         static std::unique_ptr<BotInstance> createInstance(const Config &config);
         
         // 获取Api集合
-        ApiSet getApiSet(const Session::Ptr& session, const bool& isPost);
+        ApiSet getApiSet(void *session, const bool& isPost);
 
-        ApiSet getApiSet(const Session::Ptr& session);
+        ApiSet getApiSet(void *session);
 
         ApiSet getApiSet(const bool& isPost = true);
         
         // 注册事件监听器
         template<class EventType>
-        void onEvent(std::function<void(const EventType &, const Session::Ptr &)> callback);
+		void onEvent(std::function<void(const EventType&, void*)> callback);
 
         // [阻塞] 启动机器人
         void start();

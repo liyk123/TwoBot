@@ -8,7 +8,6 @@ using twobot::Config;
 using twobot::BotInstance;
 using twobot::ApiSet;
 using namespace twobot::Event;
-using twobot::Session;
 
 int main(int argc, char** args) {
     // 解决UTF8编码，中文乱码问题，不需要可以不加
@@ -35,7 +34,7 @@ int main(int argc, char** args) {
         std::cout << "HTTP测试通过!" << std::endl;
     }
 
-    instance->onEvent<GroupMsg>([&instance](const GroupMsg & msg, const Session::Ptr& session){
+	instance->onEvent<GroupMsg>([&instance](const GroupMsg& msg, void* session) {
         twobot::ApiSet::ApiResult r = {};
         if (msg.raw_message == "你好") 
         {
@@ -60,7 +59,7 @@ int main(int argc, char** args) {
         std::cout << r.second.dump() << std::endl;
     });
 
-    instance->onEvent<PrivateMsg>([&instance](const PrivateMsg & msg, const Session::Ptr& session){
+	instance->onEvent<PrivateMsg>([&instance](const PrivateMsg& msg, void* session) {
         twobot::ApiSet::ApiResult r = {};
         if (msg.raw_message == "你好")
         {
@@ -78,15 +77,15 @@ int main(int argc, char** args) {
         std::cout << r.second.dump() << std::endl;
     });
 
-    instance->onEvent<EnableEvent>([&instance](const EnableEvent & msg, const Session::Ptr& session){
+	instance->onEvent<EnableEvent>([&instance](const EnableEvent& msg, void* session) {
         std::cout << "twobot已启动！机器人QQ："<< msg.self_id << std::endl;
     });
 
-    instance->onEvent<DisableEvent>([&instance](const DisableEvent & msg, const Session::Ptr& session){
+	instance->onEvent<DisableEvent>([&instance](const DisableEvent& msg, void* session) {
         std::cout << "twobot已停止！ID: " << msg.self_id << std::endl;
     });
 
-    instance->onEvent<ConnectEvent>([&instance](const ConnectEvent & msg, const Session::Ptr& session){
+	instance->onEvent<ConnectEvent>([&instance](const ConnectEvent& msg, void* session) {
         std::cout << "twobot已连接！ID: " << msg.self_id << std::endl;
     });
 

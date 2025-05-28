@@ -3,12 +3,14 @@
 #include <string>
 #include <httplib.h>
 #include <utility>
+#include <brynet/net/http/HttpService.hpp>
 
 namespace twobot 
 {
     extern std::atomic<std::size_t> g_seq = 0;
+    using Session = brynet::net::http::HttpSession;
 
-    void ApiSet::bindSession(const Session::Ptr& pSession)
+    void ApiSet::bindSession(void* pSession)
     {
         m_pSession = pSession;
     }
@@ -17,7 +19,7 @@ namespace twobot
         return callApi("/get_version_info", {}).first;
     }
 
-    ApiSet::ApiSet(const Config & config, const Session::Ptr& session, const bool &isPost) 
+    ApiSet::ApiSet(const Config & config, void* session, const bool &isPost) 
         : config(config)
         , m_pSession(session)
         , m_isPost(isPost)
@@ -42,7 +44,7 @@ namespace twobot
                 result.second = content["echo"];
             }
             auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
-            m_pSession->send(std::move(wsFrame));
+            static_cast<Session*>(m_pSession)->send(std::move(wsFrame));
             result.first = true;
         }
         else

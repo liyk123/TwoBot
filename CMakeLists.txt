@@ -11,7 +11,6 @@ add_library(TwoBot STATIC
         src/ThreadSafedUnorderedMap.hh
 )
 
-target_include_directories(TwoBot PUBLIC src/)
 
 find_package(OpenSSL REQUIRED)
 find_package(httplib CONFIG REQUIRED)
@@ -26,11 +25,33 @@ target_compile_definitions(TwoBot PUBLIC _SILENCE_CXX17_C_HEADER_DEPRECATION_WAR
 add_executable(TwoBot-demo demo/main.cc)
 target_link_libraries(TwoBot-demo TwoBot)
 
+target_include_directories(TwoBot PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>   # for headers when building
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>  # for client in install mode
+)
+
 install(TARGETS TwoBot
-            LIBRARY DESTINATION lib)
+            EXPORT TwoBot_targets
+            LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 install(DIRECTORY src/ DESTINATION include
             FILES_MATCHING PATTERN "*.hh")
+
+install(EXPORT TwoBot_targets
+        FILE TwoBot-targets.cmake
+        NAMESPACE TwoBot::
+        DESTINATION share/TwoBot)
+
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/TwoBot-config.cmake"
+"include(CMakeFindDependencyMacro)\n"
+"find_dependency(OpenSSL REQUIRED)\n"
+"find_dependency(httplib CONFIG REQUIRED)\n"
+"find_dependency(nlohmann_json CONFIG REQUIRED)\n"
+"include(\"\${CMAKE_CURRENT_LIST_DIR}/TwoBot-targets.cmake\")\n"
+)
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/TwoBot-config.cmake"
+        DESTINATION share/TwoBot)
 
 if(MSVC)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8")

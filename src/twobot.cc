@@ -21,11 +21,11 @@ namespace twobot {
 		return std::unique_ptr<BotInstance>(new BotInstance{config} );
 	}
 
-	ApiSet BotInstance::getApiSet(const Session::Ptr& session, const bool& isPost) {
+	ApiSet BotInstance::getApiSet(void *session, const bool& isPost) {
 		return {config, session, isPost};
 	}
 
-	ApiSet BotInstance::getApiSet(const Session::Ptr& session)
+	ApiSet BotInstance::getApiSet(void *session)
 	{
 		return getApiSet(session, false);
 	}
@@ -43,9 +43,9 @@ namespace twobot {
 	}
 
 	template<class EventType>
-	void BotInstance::onEvent(std::function<void(const EventType&, const Session::Ptr&)> callback) {
+	void BotInstance::onEvent(std::function<void(const EventType&, void *)> callback) {
 		EventType event{};
-		this->event_callbacks[event.getType()] = Callback([callback](const Event::EventBase& event, const Session::Ptr& session) {
+		this->event_callbacks[event.getType()] = Callback([callback](const Event::EventBase& event, void *session) {
 			try{
 				callback(static_cast<const EventType&>(event), session);
 			}catch(const std::exception &e){
@@ -77,10 +77,13 @@ namespace twobot {
 						if(json_payload["meta_event_type"] == "heartbeat")
 							return;
 
-					if (!json_payload.contains("post_type") && json_payload.contains("echo") && json_payload["echo"].contains("seq"))
+					if (!json_payload.contains("post_type"))
 					{
-						std::size_t seq = json_payload["echo"]["seq"].get<std::size_t>();
-						m_hashMap.emplace(seq, json_payload["data"]);
+						if (json_payload.contains("echo") && json_payload["echo"].contains("seq")) 
+						{
+							std::size_t seq = json_payload["echo"]["seq"].get<std::size_t>();
+							m_hashMap.emplace(seq, json_payload["data"]);
+						}
 						return;
 					}
 
@@ -110,7 +113,7 @@ namespace twobot {
 							reinterpret_cast<const Event::EventBase&>(
 								*event
 							),
-							httpSession
+							httpSession.get()
 						);
 					}
 				}
