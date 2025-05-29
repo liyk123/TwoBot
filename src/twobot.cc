@@ -37,7 +37,7 @@ namespace twobot {
 
 	BotInstance::BotInstance(const Config& config) 
 		: config(config)
-		, m_hashMap()
+		, m_seqMap()
 	{
 
 	}
@@ -82,7 +82,7 @@ namespace twobot {
 						if (json_payload.contains("echo") && json_payload["echo"].contains("seq")) 
 						{
 							std::size_t seq = json_payload["echo"]["seq"].get<std::size_t>();
-							m_hashMap.emplace(seq, json_payload["data"]);
+							m_seqMap.emplace(seq, json_payload["data"]);
 						}
 						return;
 					}
@@ -147,11 +147,11 @@ namespace twobot {
 	nlohmann::json BotInstance::getApiResult(const std::size_t& seq)
 	{
 		std::optional<nlohmann::json> ret;
-		while ((ret = m_hashMap.find(seq)) == std::nullopt)
+		while ((ret = m_seqMap.find(seq)) == std::nullopt)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		}
-		m_hashMap.erase(seq);
+		m_seqMap.erase(seq);
 		return *ret;
 	}
 
