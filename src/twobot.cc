@@ -42,12 +42,12 @@ namespace twobot {
 
 	}
 
-	template<class EventType>
-	void BotInstance::onEvent(std::function<void(const EventType&, void *)> callback) {
-		EventType event{};
+	template<std::derived_from<Event::EventBase> Te>
+	void BotInstance::onEvent(std::function<void(const Te&, void *)> callback) {
+		Te event{};
 		this->event_callbacks[event.getType()] = Callback([callback](const Event::EventBase& event, void *session) {
 			try{
-				callback(static_cast<const EventType&>(event), session);
+				callback(static_cast<const Te&>(event), session);
 			}catch(const std::exception &e){
 				const auto & eventType = event.getType();
 				std::cerr << "EventType: {" << eventType.post_type << ", " << eventType.sub_type << "}\n";

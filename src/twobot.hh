@@ -935,8 +935,8 @@ namespace twobot {
         ApiSet getApiSet(const bool& isPost = true);
         
         // 注册事件监听器
-        template<class EventType>
-		void onEvent(std::function<void(const EventType&, void*)> callback);
+        template<std::derived_from<Event::EventBase> Te>
+		void onEvent(std::function<void(const Te&, void*)> callback);
 
         // [阻塞] 启动机器人
         void start();
