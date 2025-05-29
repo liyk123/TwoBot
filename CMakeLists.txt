@@ -8,7 +8,7 @@ add_library(TwoBot STATIC
         src/twobot.hh
         src/twobot.cc
         src/apiset.cc
-        src/ThreadSafedUnorderedMap.hh
+        src/tsumap.hh
 )
 
 

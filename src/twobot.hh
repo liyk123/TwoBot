@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <functional>
 #include <nlohmann/json.hpp>
-#include "ThreadSafedUnorderedMap.hh"
+#include "tsumap.hh"
 
 namespace nlohmann {
     template <typename T>
