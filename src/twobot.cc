@@ -79,9 +79,9 @@ namespace twobot {
 
 					if (!json_payload.contains("post_type"))
 					{
-						if (json_payload.contains("echo") && json_payload["echo"].contains("seq")) 
+						if (json_payload["echo"]["seq"].is_number_integer()) 
 						{
-							std::size_t seq = json_payload["echo"]["seq"].get<std::size_t>();
+							auto seq = json_payload["echo"]["seq"].get<std::size_t>();
 							m_seqMap.emplace(seq, json_payload["data"]);
 						}
 						return;
