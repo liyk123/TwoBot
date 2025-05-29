@@ -11,7 +11,7 @@
 
 namespace twobot {
     template <typename Key, typename Value, typename Hash = std::hash<Key>>
-    class ThreadSafedUnorderedMap {
+    class tsumap {
     private:
         struct Bucket {
             using BucketData = std::unordered_map<Key, Value>;
@@ -57,7 +57,7 @@ namespace twobot {
         }
 
     public:
-        ThreadSafedUnorderedMap(const std::size_t bucketCount = std::thread::hardware_concurrency()) 
+        tsumap(const std::size_t bucketCount = std::thread::hardware_concurrency()) 
             : buckets(bucketCount)
             , hasher()
         {}

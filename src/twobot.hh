@@ -948,7 +948,7 @@ namespace twobot {
     protected:
         Config config;
         std::unordered_map<EventType, Callback> event_callbacks{};
-        ThreadSafedUnorderedMap<std::size_t, nlohmann::json> m_hashMap;
+        tsumap<std::size_t, nlohmann::json> m_hashMap;
     protected:
         explicit BotInstance(const Config &config);
 
