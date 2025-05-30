@@ -175,20 +175,20 @@ namespace twobot {
 		});
 
 		// 仅仅为了特化onEvent模板
-		instance->onEvent<Event::GroupMsg>([](const auto&, const auto&) {});
-		instance->onEvent<Event::PrivateMsg>([](const auto&, const auto&) {});
-		instance->onEvent<Event::EnableEvent>([](const auto&, const auto&) {});
-		instance->onEvent<Event::DisableEvent>([](const auto&, const auto&) {});
-		instance->onEvent<Event::ConnectEvent>([](const auto&, const auto&) {});
-		instance->onEvent<Event::GroupUploadNotice>([](const auto&, const auto&) {});
-		instance->onEvent<Event::GroupAdminNotice>([](const auto&, const auto&) {});
-		instance->onEvent<Event::GroupDecreaseNotice>([](const auto&, const auto&) {});
-		instance->onEvent<Event::GroupInceaseNotice>([](const auto&, const auto&) {});
-		instance->onEvent<Event::GroupBanNotice>([](const auto&, const auto&) {});
-		instance->onEvent<Event::FriendAddNotice>([](const auto&, const auto&) {});
-		instance->onEvent<Event::GroupRecallNotice>([](const auto&, const auto&) {});
-		instance->onEvent<Event::FriendRecallNotice>([](const auto&, const auto&) {});
-		instance->onEvent<Event::GroupNotifyNotice>([](const auto&, const auto&) {});
+		instance->onEvent<Event::GroupMsg>([](const auto&, void*) {});
+		instance->onEvent<Event::PrivateMsg>([](const auto&, void*) {});
+		instance->onEvent<Event::EnableEvent>([](const auto&, void*) {});
+		instance->onEvent<Event::DisableEvent>([](const auto&, void*) {});
+		instance->onEvent<Event::ConnectEvent>([](const auto&, void*) {});
+		instance->onEvent<Event::GroupUploadNotice>([](const auto&, void*) {});
+		instance->onEvent<Event::GroupAdminNotice>([](const auto&, void*) {});
+		instance->onEvent<Event::GroupDecreaseNotice>([](const auto&, void*) {});
+		instance->onEvent<Event::GroupInceaseNotice>([](const auto&, void*) {});
+		instance->onEvent<Event::GroupBanNotice>([](const auto&, void*) {});
+		instance->onEvent<Event::FriendAddNotice>([](const auto&, void*) {});
+		instance->onEvent<Event::GroupRecallNotice>([](const auto&, void*) {});
+		instance->onEvent<Event::FriendRecallNotice>([](const auto&, void*) {});
+		instance->onEvent<Event::GroupNotifyNotice>([](const auto&, void*) {});
 	}
 
 	std::unique_ptr<Event::EventBase> Event::EventBase::construct(const EventType& event) {
