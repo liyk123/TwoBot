@@ -123,6 +123,14 @@ namespace twobot {
 
 		};
 
+		auto httpHeaderCallback = [this](const HTTPParser& httpParser, const HttpSession::Ptr& httpSession) {
+			if (config.token && config.token != httpParser.getValue("Authorization").substr(sizeof("Bearer ")-1))
+			{
+				std::cerr << "Authorization failed!" << std::endl;
+				httpSession->postClose();
+			}
+        };
+
 		wrapper::HttpListenerBuilder listener_builder;
 		listener_builder
 			.WithService(service)
@@ -131,7 +139,8 @@ namespace twobot {
 				})
 			.WithMaxRecvBufferSize(static_cast<size_t>(1024 * 1024 * 4))
 			.WithAddr(false, "0.0.0.0", websocket_port)
-			.WithEnterCallback([ws_enter_callback](const HttpSession::Ptr& httpSession, HttpSessionHandlers& handlers) {
+			.WithEnterCallback([ws_enter_callback, httpHeaderCallback](const HttpSession::Ptr& httpSession, HttpSessionHandlers& handlers) {
+				handlers.setHeaderCallback(httpHeaderCallback);
 				handlers.setWSCallback(ws_enter_callback);
 				})
             .WithReusePort()

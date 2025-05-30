@@ -20,7 +20,7 @@ find_path(BRYNET_INCLUDE_DIRS "brynet/Version.hpp")
 target_include_directories(TwoBot PRIVATE ${BRYNET_INCLUDE_DIRS})
 
 target_link_libraries(TwoBot PUBLIC nlohmann_json::nlohmann_json httplib::httplib OpenSSL::SSL OpenSSL::Crypto)
-target_compile_definitions(TwoBot PUBLIC _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING CPPHTTPLIB_OPENSSL_SUPPORT)
+target_compile_definitions(TwoBot PUBLIC _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING CPPHTTPLIB_OPENSSL_SUPPORT BRYNET_USE_OPENSSL)
 
 add_executable(TwoBot-demo demo/main.cc)
 target_link_libraries(TwoBot-demo TwoBot)
