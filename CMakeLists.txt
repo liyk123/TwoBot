@@ -9,6 +9,7 @@ add_library(TwoBot STATIC
         src/twobot.cc
         src/apiset.cc
         src/tsumap.hh
+        src/jsonex.hh
 )
 
 

@@ -16,6 +16,7 @@
 #include <brynet/net/wrapper/ServiceBuilder.hpp>
 #include <brynet/base/AppStatus.hpp>
 #include "tsumap.hh"
+#include "jsonex.hh"
 
 namespace twobot {
 	extern tsumap<std::size_t, nlohmann::json> g_seqMap = {};
