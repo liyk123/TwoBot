@@ -15,8 +15,11 @@
 #include <brynet/net/wrapper/HttpServiceBuilder.hpp>
 #include <brynet/net/wrapper/ServiceBuilder.hpp>
 #include <brynet/base/AppStatus.hpp>
+#include "tsumap.hh"
 
 namespace twobot {
+	extern tsumap<std::size_t, nlohmann::json> g_seqMap = {};
+
 	std::unique_ptr<BotInstance> BotInstance::createInstance(const Config& config) {
 		return std::unique_ptr<BotInstance>(new BotInstance{config} );
 	}
@@ -37,7 +40,6 @@ namespace twobot {
 
 	BotInstance::BotInstance(const Config& config) 
 		: config(config)
-		, m_seqMap()
 	{
 
 	}
@@ -82,7 +84,7 @@ namespace twobot {
 						if (json_payload["echo"]["seq"].is_number_integer()) 
 						{
 							auto seq = json_payload["echo"]["seq"].get<std::size_t>();
-							m_seqMap.emplace(seq, json_payload["data"]);
+							g_seqMap.emplace(seq, json_payload["data"]);
 						}
 						return;
 					}
@@ -153,14 +155,14 @@ namespace twobot {
 		}
 	}
 
-	nlohmann::json BotInstance::getApiResult(const std::size_t& seq)
+	nlohmann::json getApiResult(const std::size_t& seq)
 	{
 		std::optional<nlohmann::json> ret;
-		while ((ret = m_seqMap.find(seq)) == std::nullopt)
+		while ((ret = g_seqMap.find(seq)) == std::nullopt)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		}
-		m_seqMap.erase(seq);
+		g_seqMap.erase(seq);
 		return *ret;
 	}
 

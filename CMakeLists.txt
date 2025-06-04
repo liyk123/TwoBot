@@ -34,8 +34,7 @@ install(TARGETS TwoBot
             EXPORT TwoBot_targets
             LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
-install(DIRECTORY src/ DESTINATION include
-            FILES_MATCHING PATTERN "*.hh")
+install(FILES src/twobot.hh DESTINATION include)
 
 install(EXPORT TwoBot_targets
         FILE TwoBot-targets.cmake

@@ -7,7 +7,6 @@
 #include <unordered_map>
 #include <functional>
 #include <nlohmann/json.hpp>
-#include "tsumap.hh"
 
 namespace nlohmann {
     template <typename T>
@@ -941,19 +940,18 @@ namespace twobot {
         // [阻塞] 启动机器人
         void start();
 
-        // [阻塞] 获取异步API的调用结果
-        nlohmann::json getApiResult(const std::size_t& seq);
-
         ~BotInstance() = default;
     protected:
         Config config;
         std::unordered_map<EventType, Callback> event_callbacks{};
-        tsumap<std::size_t, nlohmann::json> m_seqMap;
     protected:
         explicit BotInstance(const Config &config);
 
         friend std::default_delete<BotInstance>;
     };
+
+    // [阻塞] 获取异步API的调用结果
+    nlohmann::json getApiResult(const std::size_t& seq);
 
     // 存放私有的东西，防止编译器优化掉模板特化
     namespace _{
