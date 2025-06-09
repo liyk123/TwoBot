@@ -50,7 +50,7 @@ namespace twobot {
 		Te event{};
 		this->event_callbacks[event.getType()] = Callback([callback](const Event::EventBase& event, void *session) {
 			try{
-				callback(static_cast<const Te&>(event), session);
+				callback(dynamic_cast<const Te&>(event), session);
 			}catch(const std::exception &e){
 				const auto & eventType = event.getType();
 				std::cerr << "EventType: {" << eventType.post_type << ", " << eventType.sub_type << "}\n";
@@ -113,10 +113,10 @@ namespace twobot {
 
 					if (event_callbacks.count(event_type) != 0) {
 						event_callbacks[event_type](
-							reinterpret_cast<const Event::EventBase&>(
+							static_cast<const Event::EventBase&>(
 								*event
 							),
-							httpSession.get()
+							(void*)(&httpSession)
 						);
 					}
 				}
@@ -149,8 +149,8 @@ namespace twobot {
             .WithReusePort()
 			.asyncRun()
 			;
-				
-		while (!brynet::base::app_kbhit())
+
+		while (getchar() != EOF)
 		{
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 		}

@@ -8,23 +8,32 @@
 namespace twobot 
 {
     extern std::atomic<std::size_t> g_seq = 0;
-    using Session = brynet::net::http::HttpSession;
+    using brynet::net::http::HttpSession;
 
-    void ApiSet::bindSession(void* pSession)
-    {
-        m_pSession = pSession;
-    }
+	typedef struct _Session
+	{
+		HttpSession::Ptr sp_Session;
+	}Session;
 
     bool ApiSet::testConnection() {
         return callApi("/get_version_info", {}).first;
     }
 
-    ApiSet::ApiSet(const Config & config, void* session, const bool &isPost) 
+    ApiSet::ApiSet(const Config & config, void* session, const bool &isPost)
         : config(config)
-        , m_pSession(session)
+		, m_pSession(session ? std::make_unique<Session>(*((HttpSession::Ptr*)session)) : nullptr)
         , m_isPost(isPost)
     {
-        
+
+    }
+
+    ApiSet::~ApiSet()
+    {
+        if (m_pSession)
+        {
+            m_pSession->sp_Session = nullptr;
+            m_pSession = nullptr;
+        }
     }
 
     ApiSet::ApiResult ApiSet::callApi(const std::string &api_name, const nlohmann::json &data) {
@@ -44,7 +53,7 @@ namespace twobot
                 result.second = content["echo"];
             }
             auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
-            static_cast<Session*>(m_pSession)->send(std::move(wsFrame));
+            m_pSession->sp_Session->send(std::move(wsFrame));
             result.first = true;
         }
         else

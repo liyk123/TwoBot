@@ -41,11 +41,10 @@ namespace twobot {
         std::optional<std::string> token;
     };
 
+    typedef struct _Session Session;
 
     // Api集合，所有对机器人调用的接口都在这里
     struct ApiSet{
-        
-        void bindSession(void* pSession);
 
         bool testConnection();
         // 万api之母，负责提起所有的api的请求
@@ -561,9 +560,11 @@ namespace twobot {
     protected:
         ApiSet (const Config &config, void *session = nullptr, const bool &isPost = true);
         Config config;
-        void* m_pSession;
+        std::unique_ptr<Session> m_pSession;
         bool m_isPost;
         friend class BotInstance;
+    public:
+        ~ApiSet();
     };
 
 
