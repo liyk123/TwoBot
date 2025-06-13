@@ -1,7 +1,10 @@
 {
   "dependencies": [
     "brynet",
-    "cpp-httplib",
+    {
+      "name": "cpp-httplib",
+      "default-features": false
+    },
     "openssl",
     "nlohmann-json"
   ]
