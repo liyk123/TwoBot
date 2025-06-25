@@ -41,8 +41,6 @@ namespace twobot {
         std::optional<std::string> token;
     };
 
-    typedef struct _Session Session;
-
     // Api集合，所有对机器人调用的接口都在这里
     struct ApiSet{
 
@@ -558,13 +556,11 @@ namespace twobot {
         */
         ApiResult cleanCache();
     protected:
-        ApiSet (const Config &config, void *session = nullptr, const bool &isPost = true);
+        ApiSet(const Config& config, const std::any& session = {}, const bool& isPost = true);
         Config config;
-        std::unique_ptr<Session> m_pSession;
+        std::any m_pSession;
         bool m_isPost;
         friend class BotInstance;
-    public:
-        ~ApiSet();
     };
 
 
@@ -814,22 +810,22 @@ namespace twobot {
     struct BotInstance{
         // 消息类型
         // 消息回调函数原型
-		using Callback = std::function<void(const Event::EventBase&, void*)>;
+		using Callback = std::function<void(const Event::EventBase&, const std::any&)>;
 
 
         // 创建机器人实例
         static std::unique_ptr<BotInstance> createInstance(const Config &config);
         
         // 获取Api集合
-        ApiSet getApiSet(void *session, const bool& isPost);
+        ApiSet getApiSet(const std::any& session, const bool& isPost);
 
-        ApiSet getApiSet(void *session);
+        ApiSet getApiSet(const std::any& session);
 
         ApiSet getApiSet(const bool& isPost = true);
         
         // 注册事件监听器
         template<std::derived_from<Event::EventBase> Te>
-		void onEvent(std::function<void(const Te&, void*)> callback);
+		void onEvent(std::function<void(const Te&, const std::any&)> callback);
 
         // [阻塞] 启动机器人
         void start();
