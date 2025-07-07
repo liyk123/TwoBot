@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <functional>
 #include <nlohmann/json.hpp>
+#include <variant>
 
 namespace twobot
 {
@@ -566,22 +567,10 @@ namespace twobot {
 
 
     namespace Event{
-        struct EventBase{
-            virtual ~EventBase() = default;
-            nlohmann::json raw_msg;
-            // { post_type , message_type }
-            virtual EventType getType() const = 0;
-            
-            static std::unique_ptr<EventBase> construct(const EventType &evnet);
-            
-            // 请勿自己调用
-            virtual void parse() = 0;
-            
-        };
 
         // 以 以下类为模板参数 的onEvent必须在export_functions中调用一次，才能实现模板特化导出
-        struct PrivateMsg : EventBase{
-            EventType getType() const override{
+        struct PrivateMsg {
+            static constexpr EventType getType() {
                 return {"message", "private"};
             }
 
@@ -597,12 +586,12 @@ namespace twobot {
             } sub_type; //消息子类型
 
             nlohmann::json sender; // 日后进一步处理
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
-        struct GroupMsg : EventBase{
-            EventType getType() const override{
+        struct GroupMsg {
+            static constexpr EventType getType() {
                 return {"message", "group"};
             }
 
@@ -620,42 +609,42 @@ namespace twobot {
             } sub_type; //消息子类型
 
             nlohmann::json sender; // 日后进一步处理
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
-        struct EnableEvent : EventBase{
-            EventType getType() const override{
+        struct EnableEvent {
+            static constexpr EventType getType() {
                 return {"meta_event", "enable"};
             }
             uint64_t time; // 事件产生的时间
             uint64_t self_id; // 机器人自身QQ
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
-        struct DisableEvent : EventBase{
-            EventType getType() const override{
+        struct DisableEvent {
+            static constexpr EventType getType() {
                 return {"meta_event", "disable"};
             }
             uint64_t time; // 事件产生的时间
             uint64_t self_id; // 机器人自身QQ
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
-        struct ConnectEvent : EventBase{
-            EventType getType() const override{
+        struct ConnectEvent {
+            static constexpr EventType getType() {
                 return {"meta_event", "connect"};
             }
             uint64_t time; // 事件产生的时间
             uint64_t self_id; // 机器人自身QQ
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
-        struct GroupUploadNotice : EventBase{
-            EventType getType() const override{
+        struct GroupUploadNotice {
+            static constexpr EventType getType() {
                 return {"notice", "group_upload"};
             }
 
@@ -664,12 +653,12 @@ namespace twobot {
             uint64_t group_id; // 群QQ
             uint64_t user_id; // 上传文件的人的QQ
             nlohmann::json file; // 上传的文件信息,日后再进一步解析
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
-        struct GroupAdminNotice : EventBase{
-            EventType getType() const override{
+        struct GroupAdminNotice {
+            static constexpr EventType getType() {
                 return {"notice", "group_admin"};
             }
 
@@ -681,12 +670,12 @@ namespace twobot {
                 SET,
                 UNSET,
             } sub_type; // 事件子类型，分别表示设置和取消设置
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
-        struct GroupDecreaseNotice : EventBase{
-            EventType getType() const override{
+        struct GroupDecreaseNotice {
+            static constexpr EventType getType() {
                 return {"notice", "group_decrease"};
             }
 
@@ -700,12 +689,12 @@ namespace twobot {
                 KICK,       // 被踢出
                 KICK_ME,    // 机器人被踢出
             } sub_type; // 事件子类型，分别表示主动退群、成员被踢、登录号被踢
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
-        struct GroupInceaseNotice : EventBase{
-            EventType getType() const override{
+        struct GroupInceaseNotice {
+            static constexpr EventType getType() {
                 return {"notice", "group_increase"};
             }
             uint64_t time; // 事件产生的时间
@@ -717,12 +706,12 @@ namespace twobot {
                 APPROVE, // 同意入群
                 INVITE,  // 邀请入群
             } sub_type; // 事件子类型，分别表示管理员已同意入群、管理员邀请入群
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
-        struct GroupBanNotice : EventBase{
-            EventType getType() const override{
+        struct GroupBanNotice {
+            static constexpr EventType getType() {
                 return {"notice", "group_ban"};
             }
             uint64_t time; // 事件产生的时间
@@ -735,24 +724,24 @@ namespace twobot {
                 BAN, // 禁言
                 LIFT_BAN, // 解除禁言
             } sub_type; // 事件子类型，分别表示禁言、解除禁言
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
-        struct FriendAddNotice : EventBase{
-            EventType getType() const override{
+        struct FriendAddNotice {
+            static constexpr EventType getType() {
                 return {"notice", "friend_add"};
             }
             uint64_t time; // 事件产生的时间
             uint64_t self_id; // 机器人自身QQ
             uint64_t user_id; // 新添加好友 QQ 号
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
         // 群消息撤回事件
-        struct GroupRecallNotice : EventBase{
-            EventType getType() const override{
+        struct GroupRecallNotice {
+            static constexpr EventType getType() {
                 return {"notice", "group_recall"};
             }
             uint64_t time; // 事件产生的时间
@@ -762,26 +751,26 @@ namespace twobot {
             uint64_t user_id; // 发送者QQ
             uint64_t operator_id; // 操作者QQ
         
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
         // 好友消息撤回事件
-        struct FriendRecallNotice : EventBase{
-            EventType getType() const override{
+        struct FriendRecallNotice {
+            static constexpr EventType getType() {
                 return {"notice", "friend_recall"};
             }
             uint64_t time; // 事件产生的时间
             uint64_t self_id; // 机器人自身QQ
             uint64_t user_id; // 发送者QQ
             uint64_t message_id; // 消息ID
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
 
         // 群内通知事件，如戳一戳、群红包运气王、群成员荣誉变更
-        struct GroupNotifyNotice : EventBase{
-            EventType getType() const override{
+        struct GroupNotifyNotice {
+            static constexpr EventType getType() {
                 return {"notice", "group_notify"};
             }
             uint64_t time; // 事件产生的时间
@@ -800,9 +789,28 @@ namespace twobot {
                 EMOTION,   // 快乐源泉
             };
             std::optional<HonorType> honor_type = std::nullopt; // 荣誉类型
-        protected:
-            virtual void parse() override;
+
+            nlohmann::json raw_msg;
         };
+
+        using Variant = std::variant<
+            ConnectEvent,
+            DisableEvent,
+            EnableEvent,
+            FriendAddNotice,
+            FriendRecallNotice,
+            GroupAdminNotice,
+            GroupBanNotice,
+            GroupDecreaseNotice,
+            GroupInceaseNotice,
+            GroupMsg,
+            GroupNotifyNotice,
+            GroupRecallNotice,
+            GroupUploadNotice,
+            PrivateMsg
+        >;
+
+        std::optional<Variant> construct(const EventType& evnet);
     }
 
     /// BotInstance是一个机器人实例，机器人实例必须通过BotInstance::createInstance()创建
@@ -810,7 +818,7 @@ namespace twobot {
     struct BotInstance{
         // 消息类型
         // 消息回调函数原型
-		using Callback = std::function<void(const Event::EventBase&, const std::any&)>;
+		using Callback = std::function<void(const Event::Variant&, const std::any&)>;
 
 
         // 创建机器人实例
@@ -824,8 +832,8 @@ namespace twobot {
         ApiSet getApiSet(const bool& isPost = true);
         
         // 注册事件监听器
-        template<std::derived_from<Event::EventBase> Te>
-		void onEvent(std::function<void(const Te&, const std::any&)> callback);
+        template<typename E>
+		void onEvent(std::function<void(const E&, const std::any&)> callback);
 
         // [阻塞] 启动机器人
         void start();

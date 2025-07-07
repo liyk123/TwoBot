@@ -34,7 +34,7 @@ int main(int argc, char** args) {
         std::cout << "HTTP测试通过!" << std::endl;
     }
 
-	instance->onEvent<GroupMsg>([&instance](const GroupMsg& msg, std::any session) {
+	instance->onEvent<GroupMsg>([&instance](const GroupMsg& msg, const std::any& session) {
         twobot::ApiSet::ApiResult r = {};
         if (msg.raw_message == "你好") 
         {
@@ -59,7 +59,7 @@ int main(int argc, char** args) {
         std::cout << r.second.dump() << std::endl;
     });
 
-	instance->onEvent<PrivateMsg>([&instance](const PrivateMsg& msg, std::any session) {
+	instance->onEvent<PrivateMsg>([&instance](const PrivateMsg& msg, const std::any& session) {
         twobot::ApiSet::ApiResult r = {};
         if (msg.raw_message == "你好")
         {
@@ -77,15 +77,15 @@ int main(int argc, char** args) {
         std::cout << r.second.dump() << std::endl;
     });
 
-	instance->onEvent<EnableEvent>([&instance](const EnableEvent& msg, std::any session) {
+	instance->onEvent<EnableEvent>([&instance](const EnableEvent& msg, const std::any& session) {
         std::cout << "twobot已启动！机器人QQ："<< msg.self_id << std::endl;
     });
 
-	instance->onEvent<DisableEvent>([&instance](const DisableEvent& msg, std::any session) {
+	instance->onEvent<DisableEvent>([&instance](const DisableEvent& msg, const std::any& session) {
         std::cout << "twobot已停止！ID: " << msg.self_id << std::endl;
     });
 
-	instance->onEvent<ConnectEvent>([&instance](const ConnectEvent& msg, std::any session) {
+	instance->onEvent<ConnectEvent>([&instance](const ConnectEvent& msg, const std::any& session) {
         std::cout << "twobot已连接！ID: " << msg.self_id << std::endl;
     });
 

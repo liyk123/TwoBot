@@ -45,14 +45,14 @@ namespace twobot {
 
 	}
 
-	template<std::derived_from<Event::EventBase> Te>
-	void BotInstance::onEvent(std::function<void(const Te&, const std::any&)> callback) {
-		Te event{};
-		this->event_callbacks[event.getType()] = Callback([callback](const Event::EventBase& event, const std::any& session) {
-			try{
-				callback(dynamic_cast<const Te&>(event), session);
-			}catch(const std::exception &e){
-				const auto & eventType = event.getType();
+	template<typename E>
+	void BotInstance::onEvent(std::function<void(const E&, const std::any&)> callback) {
+		this->event_callbacks[E::getType()] = Callback([callback](const Event::Variant& event, const std::any& session) {
+			try {
+				callback(*std::get_if<E>(&event), session);
+			}
+			catch (const std::exception& e) {
+				const auto& eventType = E::getType();
 				std::cerr << "EventType: {" << eventType.post_type << ", " << eventType.sub_type << "}\n";
 				std::cerr << "\tBotInstance::onEvent error: " << e.what() << std::endl;
 			}
@@ -105,19 +105,20 @@ namespace twobot {
 						sub_type
 					};
 
-					auto event = Event::EventBase::construct(event_type);
-					if (!event)
+					auto event = Event::construct(event_type);
+					if (!event.has_value())
 						return;
-					event->raw_msg = nlohmann::json::parse(payload);
-					event->parse();
+
+					std::visit([&payload](auto&& e) { 
+						e.raw_msg = nlohmann::json::parse(payload); 
+						e.raw_msg.get_to(e); 
+					}, *event);
 
 					if (event_callbacks.count(event_type) != 0) {
 						event_callbacks[event_type](
-							static_cast<const Event::EventBase&>(
-								*event
-							),
-							httpSession
-						);
+							*event, 
+                            httpSession
+                        );
 					}
 				}
 				catch (const std::exception& e) {
@@ -194,98 +195,43 @@ namespace twobot {
 		instance->onEvent<Event::GroupNotifyNotice>([](const auto&, const std::any&) {});
 	}
 
-	std::unique_ptr<Event::EventBase> Event::EventBase::construct(const EventType& event) {
+	
+	std::optional<Event::Variant> Event::construct(const EventType& event) {
 		if (event.post_type == "message") {
 			if (event.sub_type == "group") {
-				return std::unique_ptr<Event::EventBase>(new Event::GroupMsg());
+				return Event::GroupMsg();
 			} else if (event.sub_type == "private") {
-				return std::unique_ptr<Event::EventBase>(new Event::PrivateMsg());
+				return Event::PrivateMsg();
 			}
 		} else if (event.post_type == "meta_event") {
 			if(event.sub_type == "enable"){
-				return std::unique_ptr<Event::EventBase>(new Event::EnableEvent());
+				return Event::EnableEvent();
 			}else if(event.sub_type == "disable"){
-				return std::unique_ptr<Event::EventBase>(new Event::DisableEvent());
+				return Event::DisableEvent();
 			}else if(event.sub_type == "connect"){
-				return std::unique_ptr<Event::EventBase>(new Event::ConnectEvent());
+				return Event::ConnectEvent();
 			}
 		} else if(event.post_type == "notice"){
 			if(event.sub_type == "group_upload"){
-				return std::unique_ptr<Event::EventBase>(new Event::GroupUploadNotice());
+				return Event::GroupUploadNotice();
 			} else if (event.sub_type == "group_admin"){
-				return std::unique_ptr<Event::EventBase>(new Event::GroupAdminNotice());
+				return Event::GroupAdminNotice();
 			} else if (event.sub_type == "group_decrease"){
-				return std::unique_ptr<Event::EventBase>(new Event::GroupDecreaseNotice());
+				return Event::GroupDecreaseNotice();
 			} else if (event.sub_type == "group_increase"){
-				return std::unique_ptr<Event::EventBase>(new Event::GroupInceaseNotice());
+				return Event::GroupInceaseNotice();
 			} else if (event.sub_type == "group_ban"){
-				return std::unique_ptr<Event::EventBase>( new Event::GroupBanNotice());
+				return Event::GroupBanNotice();
 			} else if (event.sub_type == "friend_add"){
-				return std::unique_ptr<Event::EventBase>(new Event::FriendAddNotice());
+				return Event::FriendAddNotice();
 			} else if (event.sub_type == "group_recall"){
-				return std::unique_ptr<Event::EventBase>(new Event::GroupRecallNotice());
+				return Event::GroupRecallNotice();
 			} else if (event.sub_type == "friend_recall"){
-				return std::unique_ptr<Event::EventBase>(new Event::FriendRecallNotice());
+				return Event::FriendRecallNotice();
 			} else if (event.sub_type == "group_notify"){
-				return std::unique_ptr<Event::EventBase>(new Event::GroupNotifyNotice());
+				return Event::GroupNotifyNotice();
 			}
 		}
-		return nullptr;
-	}
-
-	void Event::GroupMsg::parse() {
-		raw_msg.get_to(*this);
-	}
-
-	void Event::PrivateMsg::parse() {
-		raw_msg.get_to(*this);
-	}
-
-	void Event::EnableEvent::parse(){
-		raw_msg.get_to(*this);
-	}
-
-	void Event::DisableEvent::parse(){
-		raw_msg.get_to(*this);
-	}
-
-	void Event::ConnectEvent::parse(){
-		raw_msg.get_to(*this);
-	}
-
-	void Event::GroupUploadNotice::parse(){
-		raw_msg.get_to(*this);
-	}
-
-	void Event::GroupAdminNotice::parse(){
-		raw_msg.get_to(*this);
-	}
-
-	void Event::GroupDecreaseNotice::parse(){
-		raw_msg.get_to(*this);
-	}
-
-	void Event::GroupInceaseNotice::parse(){
-		raw_msg.get_to(*this);
-	}
-
-	void Event::GroupBanNotice::parse(){
-		raw_msg.get_to(*this);
-	}
-
-	void Event::FriendAddNotice::parse(){
-		raw_msg.get_to(*this);
-	}
-
-	void Event::FriendRecallNotice::parse(){
-		raw_msg.get_to(*this);
-	}
-
-	void Event::GroupRecallNotice::parse(){
-		raw_msg.get_to(*this);
-	}
-
-	void Event::GroupNotifyNotice::parse(){
-		raw_msg.get_to(*this);
+		return std::nullopt;
 	}
 };
