@@ -168,6 +168,36 @@ namespace twobot {
 		return *ret;
 	}
 
+	template<typename T>
+	inline auto _construct_pair() -> std::pair<EventType, std::function<Event::Variant()>>
+	{
+		return { T::getType(), [] {return T(); } };
+	}
+
+	std::optional<Event::Variant> Event::construct(const EventType& event) {
+		static const std::unordered_map<EventType, std::function<Event::Variant()>> constructs = {
+			_construct_pair<ConnectEvent>(),
+			_construct_pair<DisableEvent>(),
+			_construct_pair<EnableEvent>(),
+			_construct_pair<FriendAddNotice>(),
+			_construct_pair<FriendRecallNotice>(),
+			_construct_pair<GroupAdminNotice>(),
+			_construct_pair<GroupBanNotice>(),
+			_construct_pair<GroupDecreaseNotice>(),
+			_construct_pair<GroupInceaseNotice>(),
+			_construct_pair<GroupMsg>(),
+			_construct_pair<GroupNotifyNotice>(),
+			_construct_pair<GroupRecallNotice>(),
+			_construct_pair<GroupUploadNotice>(),
+			_construct_pair<PrivateMsg>()
+		};
+		auto itRet = constructs.find(event);
+		if (itRet != constructs.end())
+		{
+			return itRet->second();
+		}
+		return std::nullopt;
+	}
 
 	void _::export_functions() {
 		// 仅仅为了导出代码，不要当真，更不要去调用！！
@@ -193,45 +223,5 @@ namespace twobot {
 		instance->onEvent<Event::GroupRecallNotice>([](const auto&, const std::any&) {});
 		instance->onEvent<Event::FriendRecallNotice>([](const auto&, const std::any&) {});
 		instance->onEvent<Event::GroupNotifyNotice>([](const auto&, const std::any&) {});
-	}
-
-	
-	std::optional<Event::Variant> Event::construct(const EventType& event) {
-		if (event.post_type == "message") {
-			if (event.sub_type == "group") {
-				return Event::GroupMsg();
-			} else if (event.sub_type == "private") {
-				return Event::PrivateMsg();
-			}
-		} else if (event.post_type == "meta_event") {
-			if(event.sub_type == "enable"){
-				return Event::EnableEvent();
-			}else if(event.sub_type == "disable"){
-				return Event::DisableEvent();
-			}else if(event.sub_type == "connect"){
-				return Event::ConnectEvent();
-			}
-		} else if(event.post_type == "notice"){
-			if(event.sub_type == "group_upload"){
-				return Event::GroupUploadNotice();
-			} else if (event.sub_type == "group_admin"){
-				return Event::GroupAdminNotice();
-			} else if (event.sub_type == "group_decrease"){
-				return Event::GroupDecreaseNotice();
-			} else if (event.sub_type == "group_increase"){
-				return Event::GroupInceaseNotice();
-			} else if (event.sub_type == "group_ban"){
-				return Event::GroupBanNotice();
-			} else if (event.sub_type == "friend_add"){
-				return Event::FriendAddNotice();
-			} else if (event.sub_type == "group_recall"){
-				return Event::GroupRecallNotice();
-			} else if (event.sub_type == "friend_recall"){
-				return Event::FriendRecallNotice();
-			} else if (event.sub_type == "group_notify"){
-				return Event::GroupNotifyNotice();
-			}
-		}
-		return std::nullopt;
 	}
 };
