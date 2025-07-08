@@ -45,7 +45,7 @@ namespace twobot {
 
 	}
 
-	template<typename E>
+	template<Event::Concept E>
 	void BotInstance::onEvent(std::function<void(const E&, const std::any&)> callback) {
 		this->event_callbacks[E::getType()] = Callback([callback](const Event::Variant& event, const std::any& session) {
 			try {
@@ -168,7 +168,7 @@ namespace twobot {
 		return *ret;
 	}
 
-	template<typename T>
+	template<Event::Concept T>
 	inline auto _construct_pair() -> std::pair<EventType, std::function<Event::Variant()>>
 	{
 		return { T::getType(), [] {return T(); } };

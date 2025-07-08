@@ -8,6 +8,7 @@
 #include <functional>
 #include <nlohmann/json.hpp>
 #include <variant>
+#include <concepts>
 
 namespace twobot
 {
@@ -568,6 +569,12 @@ namespace twobot {
 
     namespace Event{
 
+        template<typename T>
+        concept Concept = requires(T obj) {
+            { obj.getType() } -> std::same_as<EventType>;
+            { obj.raw_msg } -> std::convertible_to<nlohmann::json>;
+        };
+
         // 以 以下类为模板参数 的onEvent必须在export_functions中调用一次，才能实现模板特化导出
         struct PrivateMsg {
             static constexpr EventType getType() {
@@ -832,7 +839,7 @@ namespace twobot {
         ApiSet getApiSet(const bool& isPost = true);
         
         // 注册事件监听器
-        template<typename E>
+        template<Event::Concept E>
 		void onEvent(std::function<void(const E&, const std::any&)> callback);
 
         // [阻塞] 启动机器人
