@@ -8,10 +8,12 @@
 namespace twobot 
 {
     extern std::atomic<std::size_t> g_seq = 0;
+    extern std::unordered_map<std::size_t, std::promise<ApiSet::SyncApiResult>> g_promMap;
     using brynet::net::http::HttpSession;
 
     bool ApiSet::testConnection() {
-        return callApi("/get_version_info", {}).first;
+        ApiResult result = callApi("/get_version_info", {});
+        return std::get_if<SyncApiResult>(&result)->first;
     }
 
 	ApiSet::ApiSet(const Config& config, const std::any& session, const bool& isPost)
@@ -23,11 +25,11 @@ namespace twobot
     }
 
     ApiSet::ApiResult ApiSet::callApi(const std::string &api_name, const nlohmann::json &data) {
-        ApiResult result{false, {}};
-
+        ApiResult ret;
         if (m_pSession.has_value()) 
         {
-            nlohmann::json content = 
+            std::promise<SyncApiResult> prom;
+            nlohmann::json content =
             { 
                 {"action", api_name.substr(1)},
                 {"params", data},
@@ -36,14 +38,19 @@ namespace twobot
             if (m_isPost) 
             {
                 content["echo"]["seq"] = seq;
-                result.second = content["echo"];
+                g_promMap[seq] = std::move(prom);
             }
+            else
+            {
+                prom.set_value({});
+            }
+            ret = (m_isPost ? g_promMap[seq] : prom).get_future();
             auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
-            std::any_cast<HttpSession::Ptr>(m_pSession)->send(std::move(wsFrame));
-            result.first = true;
+            std::any_cast<HttpSession::Ptr>(m_pSession)->send(std::move(wsFrame));			
         }
         else
         {
+            SyncApiResult result{ false, {} };
             httplib::Client client(config.host, config.api_port);
             httplib::Headers headers = {
                 {"Content-Type", "application/json"}
@@ -93,8 +100,9 @@ namespace twobot
                     {"error",e.what()}
                 };
             }
+            ret = result;
         }
-        return result;
+        return ret;
     }
 
     ApiSet::ApiResult ApiSet::sendPrivateMsg(uint64_t user_id, const std::string &message, bool auto_escape){

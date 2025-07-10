@@ -55,15 +55,15 @@ int main(int argc, char** args) {
         {
             r = instance->getApiSet().sendPrivateMsg(msg.user_id, "你好，我是twobot！");
         }
-
-        std::cout << r.second.dump() << std::endl;
+       
+        std::cout << std::get_if<ApiSet::SyncApiResult>(&r)->second.dump() << std::endl;
     });
 
 	instance->onEvent<PrivateMsg>([&instance](const PrivateMsg& msg, const std::any& session) {
         twobot::ApiSet::ApiResult r = {};
         if (msg.raw_message == "你好")
         {
-            r = instance->getApiSet(session).sendPrivateMsg(msg.user_id, "你好，我是twobot！");
+            r = instance->getApiSet(session, true).sendPrivateMsg(msg.user_id, "你好，我是twobot！");
         }
         else if (msg.raw_message == "头像")
         {
@@ -74,7 +74,7 @@ int main(int argc, char** args) {
 			std::sprintf(buf, "[CQ:avatar,qq=%llu]", msg.user_id);
 			r = instance->getApiSet(session).sendPrivateMsg(msg.user_id, std::string(buf));
         }
-        std::cout << r.second.dump() << std::endl;
+        std::cout << std::get_if<ApiSet::AsyncApiResult>(&r)->get().second.dump() << std::endl;
     });
 
 	instance->onEvent<EnableEvent>([&instance](const EnableEvent& msg, const std::any& session) {

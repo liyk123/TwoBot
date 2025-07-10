@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 #include <variant>
 #include <concepts>
+#include <future>
 
 namespace twobot
 {
@@ -47,8 +48,11 @@ namespace twobot {
     struct ApiSet{
 
         bool testConnection();
+
+        using SyncApiResult = std::pair<bool, nlohmann::json>;
+        using AsyncApiResult = std::future<SyncApiResult>;
+        using ApiResult = std::variant<SyncApiResult, AsyncApiResult>;
         // 万api之母，负责提起所有的api的请求
-        using ApiResult = std::pair<bool, nlohmann::json>;
         ApiResult callApi(const std::string &api_name, const nlohmann::json &data);
 
         // 下面要实现onebot标准的所有api
@@ -854,9 +858,6 @@ namespace twobot {
 
         friend std::default_delete<BotInstance>;
     };
-
-    // [阻塞] 获取异步API的调用结果
-    nlohmann::json getApiResult(const std::size_t& seq);
 
     // 存放私有的东西，防止编译器优化掉模板特化
     namespace _{

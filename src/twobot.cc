@@ -15,11 +15,10 @@
 #include <brynet/net/wrapper/HttpServiceBuilder.hpp>
 #include <brynet/net/wrapper/ServiceBuilder.hpp>
 #include <brynet/base/AppStatus.hpp>
-#include "tsumap.hh"
 #include "jsonex.hh"
 
 namespace twobot {
-	extern tsumap<std::size_t, nlohmann::json> g_seqMap = {};
+	extern std::unordered_map<std::size_t, std::promise<ApiSet::SyncApiResult>> g_promMap = {};
 
 	std::unique_ptr<BotInstance> BotInstance::createInstance(const Config& config) {
 		return std::unique_ptr<BotInstance>(new BotInstance{config} );
@@ -67,7 +66,9 @@ namespace twobot {
 		auto service = IOThreadTcpService::Create();
 		service->startWorkerThread(1);
 
-		auto ws_enter_callback = [this](const HttpSession::Ptr& httpSession,
+		std::deque<std::future<void>> tasks;
+
+		auto ws_enter_callback = [this, &tasks](const HttpSession::Ptr& httpSession,
 			WebSocketFormat::WebSocketFrameType opcode,
 			const std::string& payload) {
 				try {
@@ -85,7 +86,9 @@ namespace twobot {
 						if (json_payload["echo"]["seq"].is_number_integer()) 
 						{
 							auto seq = json_payload["echo"]["seq"].get<std::size_t>();
-							g_seqMap.emplace(seq, json_payload["data"]);
+							const auto& data = json_payload["data"];
+							g_promMap[seq].set_value({ !data.is_null(), data });
+							g_promMap.erase(seq);
 						}
 						return;
 					}
@@ -115,10 +118,12 @@ namespace twobot {
 					}, *event);
 
 					if (event_callbacks.count(event_type) != 0) {
-						event_callbacks[event_type](
-							*event, 
-                            httpSession
-                        );
+						auto task = std::async([this, l_event = std::move(event), httpSession] {
+							std::visit([this, httpSession](auto &&e) {
+								event_callbacks[e.getType()](e, httpSession);
+							}, *l_event);
+						});
+						tasks.push_back(std::move(task));
 					}
 				}
 				catch (const std::exception& e) {
@@ -151,21 +156,24 @@ namespace twobot {
 			.asyncRun()
 			;
 
+		std::jthread watcher([&tasks](std::stop_token stopToken) {
+			while (!stopToken.stop_requested())
+			{
+				if (!tasks.empty())
+				{
+					tasks.front().wait();
+					tasks.pop_front();
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
+		});
+
 		while (getchar() != EOF)
 		{
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
-	}
 
-	nlohmann::json getApiResult(const std::size_t& seq)
-	{
-		std::optional<nlohmann::json> ret;
-		while ((ret = g_seqMap.find(seq)) == std::nullopt)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
-		}
-		g_seqMap.erase(seq);
-		return *ret;
+		watcher.request_stop();
 	}
 
 	template<Event::Concept T>
