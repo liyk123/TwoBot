@@ -21,23 +21,25 @@
 namespace twobot {
 	using PromMapType = tbb::concurrent_hash_map<std::size_t, std::promise<ApiSet::SyncApiResult>>;
 	extern PromMapType g_promMap = {};
+	using SessionMapType = tbb::concurrent_unordered_map<uint64_t, brynet::net::http::HttpSession::Ptr>;
+	extern SessionMapType g_sessionMap = {};
 
 	std::unique_ptr<BotInstance> BotInstance::createInstance(const Config& config) {
 		return std::unique_ptr<BotInstance>(new BotInstance{config} );
 	}
 
-	ApiSet BotInstance::getApiSet(const std::any& session, const bool& isPost) {
-		return {config, session, isPost};
+	ApiSet BotInstance::getApiSet(const std::optional<uint64_t>& id, const ApiSet::Mode& mode) {
+		return {config, id, mode};
 	}
 
-	ApiSet BotInstance::getApiSet(const std::any& session)
+	ApiSet BotInstance::getApiSet(const std::optional<uint64_t>& id)
 	{
-		return getApiSet(session, false);
+		return getApiSet(id, { false });
 	}
 
-	ApiSet BotInstance::getApiSet(const bool& isPost)
+	ApiSet BotInstance::getApiSet(const ApiSet::Mode& mode)
 	{
-		return getApiSet({}, isPost);
+		return getApiSet(std::nullopt, mode);
 	}
 
 	BotInstance::BotInstance(const Config& config) 
@@ -47,10 +49,10 @@ namespace twobot {
 	}
 
 	template<Event::Concept E>
-	void BotInstance::onEvent(std::function<void(const E&, const std::any&)> callback) {
-		this->event_callbacks[E::getType()] = Callback([callback](const Event::Variant& event, const std::any& session) {
+	void BotInstance::onEvent(std::function<void(const E&)> callback) {
+		this->event_callbacks[E::getType()] = Callback([callback](const Event::Variant& event) {
 			try {
-				callback(*std::get_if<E>(&event), session);
+				callback(*std::get_if<E>(&event));
 			}
 			catch (const std::exception& e) {
 				const auto& eventType = E::getType();
@@ -115,15 +117,19 @@ namespace twobot {
 					if (!event.has_value())
 						return;
 
-					std::visit([&payload](auto&& e) { 
+					std::visit([&payload, httpSession](auto&& e) { 
 						e.raw_msg = nlohmann::json::parse(payload); 
-						e.raw_msg.get_to(e); 
+						e.raw_msg.get_to(e); 			
+						if constexpr (std::is_convertible_v<decltype(e), Event::ConnectEvent>)
+						{
+							g_sessionMap[e.self_id] = httpSession;
+						}
 					}, *event);
 
 					if (event_callbacks.count(event_type) != 0) {
-						tasks.run([this, l_event = std::move(event), httpSession] {
-							std::visit([this, httpSession](auto&& e) {
-								event_callbacks[e.getType()](e, httpSession);
+						tasks.run([this, l_event = std::move(event)] {
+							std::visit([this](auto&& e) {
+								event_callbacks[e.getType()](e);
 							}, *l_event);
 						});
 					}
@@ -207,19 +213,19 @@ namespace twobot {
 		});
 
 		// 仅仅为了特化onEvent模板
-		instance->onEvent<Event::GroupMsg>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::PrivateMsg>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::EnableEvent>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::DisableEvent>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::ConnectEvent>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::GroupUploadNotice>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::GroupAdminNotice>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::GroupDecreaseNotice>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::GroupInceaseNotice>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::GroupBanNotice>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::FriendAddNotice>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::GroupRecallNotice>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::FriendRecallNotice>([](const auto&, const std::any&) {});
-		instance->onEvent<Event::GroupNotifyNotice>([](const auto&, const std::any&) {});
+		instance->onEvent<Event::GroupMsg>([](const auto&) {});
+		instance->onEvent<Event::PrivateMsg>([](const auto&) {});
+		instance->onEvent<Event::EnableEvent>([](const auto&) {});
+		instance->onEvent<Event::DisableEvent>([](const auto&) {});
+		instance->onEvent<Event::ConnectEvent>([](const auto&) {});
+		instance->onEvent<Event::GroupUploadNotice>([](const auto&) {});
+		instance->onEvent<Event::GroupAdminNotice>([](const auto&) {});
+		instance->onEvent<Event::GroupDecreaseNotice>([](const auto&) {});
+		instance->onEvent<Event::GroupInceaseNotice>([](const auto&) {});
+		instance->onEvent<Event::GroupBanNotice>([](const auto&) {});
+		instance->onEvent<Event::FriendAddNotice>([](const auto&) {});
+		instance->onEvent<Event::GroupRecallNotice>([](const auto&) {});
+		instance->onEvent<Event::FriendRecallNotice>([](const auto&) {});
+		instance->onEvent<Event::GroupNotifyNotice>([](const auto&) {});
 	}
 };

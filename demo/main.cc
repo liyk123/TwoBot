@@ -25,7 +25,7 @@ int main(int argc, char** args) {
     auto instance = BotInstance::createInstance(config);
 
 
-    if(!instance->getApiSet(false).testConnection())
+    if (!instance->getApiSet().testConnection())
     {
         std::cerr << "HTTP测试失败，请启动onebot服务器，并配置HTTP端口！" << std::endl;
     }
@@ -34,7 +34,7 @@ int main(int argc, char** args) {
         std::cout << "HTTP测试通过!" << std::endl;
     }
 
-	instance->onEvent<GroupMsg>([&instance](const GroupMsg& msg, const std::any& session) {
+	instance->onEvent<GroupMsg>([&instance](const GroupMsg& msg) {
         twobot::ApiSet::ApiResult r = {};
         if (msg.raw_message == "你好") 
         {
@@ -59,11 +59,11 @@ int main(int argc, char** args) {
         std::cout << std::get_if<ApiSet::SyncApiResult>(&r)->second.dump() << std::endl;
     });
 
-	instance->onEvent<PrivateMsg>([&instance](const PrivateMsg& msg, const std::any& session) {
+	instance->onEvent<PrivateMsg>([&instance](const PrivateMsg& msg) {
         twobot::ApiSet::ApiResult r = {};
         if (msg.raw_message == "你好")
         {
-            r = instance->getApiSet(session, true).sendPrivateMsg(msg.user_id, "你好，我是twobot！");
+            r = instance->getApiSet(msg.self_id, { true }).sendPrivateMsg(msg.user_id, "你好，我是twobot！");
         }
         else if (msg.raw_message == "头像")
         {
@@ -72,20 +72,20 @@ int main(int argc, char** args) {
             };
 			char buf[64];
 			std::sprintf(buf, "[CQ:avatar,qq=%llu]", msg.user_id);
-			r = instance->getApiSet(session).sendPrivateMsg(msg.user_id, std::string(buf));
+			r = instance->getApiSet(msg.self_id).sendPrivateMsg(msg.user_id, std::string(buf));
         }
         std::cout << std::get_if<ApiSet::AsyncApiResult>(&r)->get().second.dump() << std::endl;
     });
 
-	instance->onEvent<EnableEvent>([&instance](const EnableEvent& msg, const std::any& session) {
+	instance->onEvent<EnableEvent>([&instance](const EnableEvent& msg) {
         std::cout << "twobot已启动！机器人QQ："<< msg.self_id << std::endl;
     });
 
-	instance->onEvent<DisableEvent>([&instance](const DisableEvent& msg, const std::any& session) {
+	instance->onEvent<DisableEvent>([&instance](const DisableEvent& msg) {
         std::cout << "twobot已停止！ID: " << msg.self_id << std::endl;
     });
 
-	instance->onEvent<ConnectEvent>([&instance](const ConnectEvent& msg, const std::any& session) {
+	instance->onEvent<ConnectEvent>([&instance](const ConnectEvent& msg) {
         std::cout << "twobot已连接！ID: " << msg.self_id << std::endl;
     });
 

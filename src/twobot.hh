@@ -49,6 +49,11 @@ namespace twobot {
 
         bool testConnection();
 
+        union Mode {
+            bool isPost;
+            bool needResp;
+        };
+
         using SyncApiResult = std::pair<bool, nlohmann::json>;
         using AsyncApiResult = std::future<SyncApiResult>;
         using ApiResult = std::variant<SyncApiResult, AsyncApiResult>;
@@ -562,10 +567,10 @@ namespace twobot {
         */
         ApiResult cleanCache();
     protected:
-        ApiSet(const Config& config, const std::any& session = {}, const bool& isPost = true);
+        ApiSet(const Config& config, const std::optional<uint64_t>& id = std::nullopt, const Mode& mode = {true});
         Config config;
-        std::any m_pSession;
-        bool m_isPost;
+        std::optional<uint64_t> m_id;
+        Mode m_mode;
         friend class BotInstance;
     };
 
@@ -829,22 +834,22 @@ namespace twobot {
     struct BotInstance{
         // 消息类型
         // 消息回调函数原型
-		using Callback = std::function<void(const Event::Variant&, const std::any&)>;
+		using Callback = std::function<void(const Event::Variant&)>;
 
 
         // 创建机器人实例
         static std::unique_ptr<BotInstance> createInstance(const Config &config);
         
         // 获取Api集合
-        ApiSet getApiSet(const std::any& session, const bool& isPost);
+        ApiSet getApiSet(const std::optional<uint64_t>& id, const ApiSet::Mode& mode);
 
-        ApiSet getApiSet(const std::any& session);
+        ApiSet getApiSet(const std::optional<uint64_t>& id);
 
-        ApiSet getApiSet(const bool& isPost = true);
+        ApiSet getApiSet(const ApiSet::Mode& mode = {true});
         
         // 注册事件监听器
         template<Event::Concept E>
-		void onEvent(std::function<void(const E&, const std::any&)> callback);
+		void onEvent(std::function<void(const E&)> callback);
 
         // [阻塞] 启动机器人
         void start();

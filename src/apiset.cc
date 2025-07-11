@@ -12,23 +12,25 @@ namespace twobot
     using PromMapType = tbb::concurrent_hash_map<std::size_t, std::promise<ApiSet::SyncApiResult>>;
     extern PromMapType g_promMap;
     using brynet::net::http::HttpSession;
+    using SessionMapType = tbb::concurrent_unordered_map<uint64_t, HttpSession::Ptr>;
+    extern SessionMapType g_sessionMap;
 
     bool ApiSet::testConnection() {
         ApiResult result = callApi("/get_version_info", {});
         return std::get_if<SyncApiResult>(&result)->first;
     }
 
-	ApiSet::ApiSet(const Config& config, const std::any& session, const bool& isPost)
+	ApiSet::ApiSet(const Config& config, const std::optional<uint64_t>& id, const ApiSet::Mode& mode)
         : config(config)
-		, m_pSession(session)
-        , m_isPost(isPost)
+        , m_id(id)
+        , m_mode(mode)
     {
 
     }
 
     ApiSet::ApiResult ApiSet::callApi(const std::string &api_name, const nlohmann::json &data) {
         ApiResult ret;
-        if (m_pSession.has_value()) 
+        if (m_id.has_value()) 
         {
             std::promise<SyncApiResult> prom;
             nlohmann::json content =
@@ -38,7 +40,7 @@ namespace twobot
             };
             std::size_t seq = g_seq++;
             ret = prom.get_future();
-            if (m_isPost) 
+            if (m_mode.needResp) 
             {
                 content["echo"]["seq"] = seq;
                 g_promMap.insert({ seq, std::move(prom) });
@@ -48,7 +50,7 @@ namespace twobot
                 prom.set_value({});
             }
             auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
-            std::any_cast<HttpSession::Ptr>(m_pSession)->send(std::move(wsFrame));			
+            g_sessionMap[*m_id]->send(std::move(wsFrame));
         }
         else
         {
@@ -67,7 +69,7 @@ namespace twobot
             }
             httplib::Response response = {};
 
-            if (m_isPost) 
+            if (m_mode.isPost)
             {
                 auto r = client.Post(
                     api_name,
