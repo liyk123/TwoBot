@@ -6,6 +6,7 @@
       "default-features": false
     },
     "openssl",
-    "nlohmann-json"
+    "nlohmann-json",
+    "tbb"
   ]
 }

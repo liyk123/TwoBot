@@ -4,11 +4,13 @@
 #include <httplib.h>
 #include <utility>
 #include <brynet/net/http/HttpService.hpp>
+#include <tbb/tbb.h>
 
 namespace twobot 
 {
     extern std::atomic<std::size_t> g_seq = 0;
-    extern std::unordered_map<std::size_t, std::promise<ApiSet::SyncApiResult>> g_promMap;
+    using PromMapType = tbb::concurrent_hash_map<std::size_t, std::promise<ApiSet::SyncApiResult>>;
+    extern PromMapType g_promMap;
     using brynet::net::http::HttpSession;
 
     bool ApiSet::testConnection() {
@@ -35,16 +37,16 @@ namespace twobot
                 {"params", data},
             };
             std::size_t seq = g_seq++;
+            ret = prom.get_future();
             if (m_isPost) 
             {
                 content["echo"]["seq"] = seq;
-                g_promMap[seq] = std::move(prom);
+                g_promMap.insert({ seq, std::move(prom) });
             }
             else
             {
                 prom.set_value({});
             }
-            ret = (m_isPost ? g_promMap[seq] : prom).get_future();
             auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
             std::any_cast<HttpSession::Ptr>(m_pSession)->send(std::move(wsFrame));			
         }

@@ -15,10 +15,12 @@
 #include <brynet/net/wrapper/HttpServiceBuilder.hpp>
 #include <brynet/net/wrapper/ServiceBuilder.hpp>
 #include <brynet/base/AppStatus.hpp>
+#include <tbb/tbb.h>
 #include "jsonex.hh"
 
 namespace twobot {
-	extern std::unordered_map<std::size_t, std::promise<ApiSet::SyncApiResult>> g_promMap = {};
+	using PromMapType = tbb::concurrent_hash_map<std::size_t, std::promise<ApiSet::SyncApiResult>>;
+	extern PromMapType g_promMap = {};
 
 	std::unique_ptr<BotInstance> BotInstance::createInstance(const Config& config) {
 		return std::unique_ptr<BotInstance>(new BotInstance{config} );
@@ -63,10 +65,9 @@ namespace twobot {
 		using namespace brynet::net;
 		using namespace brynet::net::http;
 		auto websocket_port = config.ws_port;
+		tbb::task_group tasks;
 		auto service = IOThreadTcpService::Create();
 		service->startWorkerThread(1);
-
-		std::deque<std::future<void>> tasks;
 
 		auto ws_enter_callback = [this, &tasks](const HttpSession::Ptr& httpSession,
 			WebSocketFormat::WebSocketFrameType opcode,
@@ -87,8 +88,10 @@ namespace twobot {
 						{
 							auto seq = json_payload["echo"]["seq"].get<std::size_t>();
 							const auto& data = json_payload["data"];
-							g_promMap[seq].set_value({ !data.is_null(), data });
-							g_promMap.erase(seq);
+							PromMapType::accessor acc;
+							g_promMap.find(acc, seq);
+							acc->second.set_value({ !data.is_null(), data });
+							g_promMap.erase(acc);
 						}
 						return;
 					}
@@ -118,12 +121,11 @@ namespace twobot {
 					}, *event);
 
 					if (event_callbacks.count(event_type) != 0) {
-						auto task = std::async([this, l_event = std::move(event), httpSession] {
-							std::visit([this, httpSession](auto &&e) {
+						tasks.run([this, l_event = std::move(event), httpSession] {
+							std::visit([this, httpSession](auto&& e) {
 								event_callbacks[e.getType()](e, httpSession);
 							}, *l_event);
 						});
-						tasks.push_back(std::move(task));
 					}
 				}
 				catch (const std::exception& e) {
@@ -156,24 +158,12 @@ namespace twobot {
 			.asyncRun()
 			;
 
-		std::jthread watcher([&tasks](std::stop_token stopToken) {
-			while (!stopToken.stop_requested())
-			{
-				if (!tasks.empty())
-				{
-					tasks.front().wait();
-					tasks.pop_front();
-				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
-		});
-
 		while (getchar() != EOF)
 		{
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
 
-		watcher.request_stop();
+		tasks.wait();
 	}
 
 	template<Event::Concept T>
