@@ -47,6 +47,7 @@ file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/TwoBot-config.cmake"
 "find_dependency(OpenSSL REQUIRED)\n"
 "find_dependency(httplib CONFIG REQUIRED)\n"
 "find_dependency(nlohmann_json CONFIG REQUIRED)\n"
+"find_dependency(TBB CONFIG REQUIRED)\n"
 "include(\"\${CMAKE_CURRENT_LIST_DIR}/TwoBot-targets.cmake\")\n"
 )
 
