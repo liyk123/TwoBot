@@ -49,14 +49,21 @@ namespace twobot {
 
         bool testConnection();
 
-        union Mode {
-            bool isPost;
-            bool needResp;
-        };
+		struct SyncMode { bool isPost; };
+		struct AsyncMode { bool needResp; };
+        using ApiMode = std::variant<SyncMode, AsyncMode>;
 
-        using SyncApiResult = std::pair<bool, nlohmann::json>;
-        using AsyncApiResult = std::future<SyncApiResult>;
-        using ApiResult = std::variant<SyncApiResult, AsyncApiResult>;
+        struct SyncConfig {
+            std::string host;
+            uint16_t port;
+            std::optional<std::string> token;
+        };
+        struct AsyncConfig { uint64_t id; };
+        using ApiConfig = std::variant<SyncConfig, AsyncConfig>;
+
+        using SyncResult = std::pair<bool, nlohmann::json>;
+        using AsyncResult = std::future<SyncResult>;
+        using ApiResult = std::variant<SyncResult, AsyncResult>;
         // 万api之母，负责提起所有的api的请求
         ApiResult callApi(const std::string &api_name, const nlohmann::json &data);
 
@@ -567,10 +574,9 @@ namespace twobot {
         */
         ApiResult cleanCache();
     protected:
-        ApiSet(const Config& config, const std::optional<uint64_t>& id = std::nullopt, const Mode& mode = {true});
-        Config config;
-        std::optional<uint64_t> m_id;
-        Mode m_mode;
+		ApiSet(const ApiConfig& config, const ApiMode& mode);
+        ApiConfig m_config;
+        ApiMode m_mode;
         friend class BotInstance;
     };
 
@@ -841,11 +847,9 @@ namespace twobot {
         static std::unique_ptr<BotInstance> createInstance(const Config &config);
         
         // 获取Api集合
-        ApiSet getApiSet(const std::optional<uint64_t>& id, const ApiSet::Mode& mode);
+		ApiSet getApiSet(const uint64_t& id, const ApiSet::AsyncMode& mode = { false });
 
-        ApiSet getApiSet(const std::optional<uint64_t>& id);
-
-        ApiSet getApiSet(const ApiSet::Mode& mode = {true});
+		ApiSet getApiSet(const ApiSet::SyncMode& mode = { true });
         
         // 注册事件监听器
         template<Event::Concept E>

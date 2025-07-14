@@ -9,104 +9,118 @@
 namespace twobot 
 {
     extern std::atomic<std::size_t> g_seq = 0;
-    using PromMapType = tbb::concurrent_hash_map<std::size_t, std::promise<ApiSet::SyncApiResult>>;
+    using PromMapType = tbb::concurrent_hash_map<std::size_t, std::promise<ApiSet::SyncResult>>;
     extern PromMapType g_promMap;
     using brynet::net::http::HttpSession;
     using SessionMapType = tbb::concurrent_unordered_map<uint64_t, HttpSession::Ptr>;
     extern SessionMapType g_sessionMap;
+    template<class... Ts> struct overload : Ts... { using Ts::operator()...; };
+    template<class... Ts> overload(Ts...) -> overload<Ts...>;
+
+    inline ApiSet::ApiResult callApiAsync(const std::string& api_name, const nlohmann::json& data, const ApiSet::AsyncConfig config, const ApiSet::AsyncMode& mode)
+    {
+        ApiSet::ApiResult ret;
+        std::promise<ApiSet::SyncResult> prom;
+        nlohmann::json content =
+        {
+            {"action", api_name.substr(1)},
+            {"params", data},
+        };
+        std::size_t seq = g_seq++;
+        ret = prom.get_future();
+        if (mode.needResp)
+        {
+            content["echo"]["seq"] = seq;
+            g_promMap.insert({ seq, std::move(prom) });
+        }
+        else
+        {
+            prom.set_value({ false, {} });
+        }
+        auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
+        g_sessionMap[config.id]->send(std::move(wsFrame));
+        return ret;
+    }
+
+    inline ApiSet::ApiResult callApiSync(const std::string& api_name, const nlohmann::json& data, const ApiSet::SyncConfig& config, const ApiSet::SyncMode& mode)
+    {
+        ApiSet::SyncResult result{ false, {} };
+        httplib::Client client(config.host, config.port);
+        httplib::Headers headers = {
+            {"Content-Type", "application/json"}
+        };
+        if (config.token.has_value()) {
+            headers.insert(
+                std::make_pair(
+                    std::string{ "Authorization" },
+                    "Bearer " + *config.token
+                )
+            );
+        }
+        httplib::Response response = {};
+
+        if (mode.isPost)
+        {
+            auto r = client.Post(
+                api_name,
+                headers,
+                data.dump(),
+                "application/json"
+            );
+            if (r != nullptr) {
+                response = *r;
+            }
+        }
+        else
+        {
+            httplib::Params params = {};
+            if (!data.empty())
+            {
+                params = data;
+            }
+            auto r = client.Get(api_name, params, headers);
+            if (r != nullptr) {
+                response = *r;
+            }
+        }
+
+        result.first = (response.status == 200);
+
+        try {
+            result.second = nlohmann::json::parse(response.body, nullptr, !result.first);
+        }
+        catch (const std::exception& e) {
+            result.second = nlohmann::json{
+                {"error",e.what()}
+            };
+        }
+        return result;
+    }
 
     bool ApiSet::testConnection() {
         ApiResult result = callApi("/get_version_info", {});
-        return std::get_if<SyncApiResult>(&result)->first;
+        return std::get_if<SyncResult>(&result)->first;
     }
 
-	ApiSet::ApiSet(const Config& config, const std::optional<uint64_t>& id, const ApiSet::Mode& mode)
-        : config(config)
-        , m_id(id)
+	ApiSet::ApiSet(const ApiConfig& config, const ApiSet::ApiMode& mode)
+        : m_config(config)
         , m_mode(mode)
     {
 
     }
 
     ApiSet::ApiResult ApiSet::callApi(const std::string &api_name, const nlohmann::json &data) {
-        ApiResult ret;
-        if (m_id.has_value()) 
-        {
-            std::promise<SyncApiResult> prom;
-            nlohmann::json content =
-            { 
-                {"action", api_name.substr(1)},
-                {"params", data},
-            };
-            std::size_t seq = g_seq++;
-            ret = prom.get_future();
-            if (m_mode.needResp) 
-            {
-                content["echo"]["seq"] = seq;
-                g_promMap.insert({ seq, std::move(prom) });
-            }
-            else
-            {
-                prom.set_value({});
-            }
-            auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
-            g_sessionMap[*m_id]->send(std::move(wsFrame));
-        }
-        else
-        {
-            SyncApiResult result{ false, {} };
-            httplib::Client client(config.host, config.api_port);
-            httplib::Headers headers = {
-                {"Content-Type", "application/json"}
-            };
-            if (config.token.has_value()) {
-                headers.insert(
-                    std::make_pair(
-                        std::string{ "Authorization" },
-                        "Bearer " + *config.token
-                    )
-                );
-            }
-            httplib::Response response = {};
-
-            if (m_mode.isPost)
-            {
-                auto r = client.Post(
-                    api_name,
-                    headers,
-                    data.dump(),
-                    "application/json"
-                );
-                if (r != nullptr) {
-                    response = *r;
-                }
-            }
-            else
-            {
-                httplib::Params params = {};
-                if (!data.empty())
-                {
-                    params = data;
-                }
-                auto r = client.Get(api_name, params, headers);
-                if (r != nullptr) {
-                    response = *r;
-                }
-            }
-
-            result.first = (response.status == 200);
-
-            try {
-                result.second = nlohmann::json::parse(response.body, nullptr, !result.first);
-            }
-            catch (const std::exception& e) {
-                result.second = nlohmann::json{
-                    {"error",e.what()}
-                };
-            }
-            ret = result;
-        }
-        return ret;
+		auto callApiImpl = overload{
+            [&](AsyncConfig config, AsyncMode mode) {
+                return callApiAsync(api_name, data, config, mode);
+            },
+            [&](SyncConfig config, SyncMode mode) {
+                return callApiSync(api_name, data, config, mode);
+            },
+            [](AsyncConfig, SyncMode) -> ApiResult { return {}; },
+            [](SyncConfig, AsyncMode) -> ApiResult { return {}; }
+        };
+        return std::visit(callApiImpl, m_config, m_mode);
     }
 
     ApiSet::ApiResult ApiSet::sendPrivateMsg(uint64_t user_id, const std::string &message, bool auto_escape){

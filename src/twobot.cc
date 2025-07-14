@@ -19,7 +19,7 @@
 #include "jsonex.hh"
 
 namespace twobot {
-	using PromMapType = tbb::concurrent_hash_map<std::size_t, std::promise<ApiSet::SyncApiResult>>;
+	using PromMapType = tbb::concurrent_hash_map<std::size_t, std::promise<ApiSet::SyncResult>>;
 	extern PromMapType g_promMap = {};
 	using SessionMapType = tbb::concurrent_unordered_map<uint64_t, brynet::net::http::HttpSession::Ptr>;
 	extern SessionMapType g_sessionMap = {};
@@ -28,18 +28,13 @@ namespace twobot {
 		return std::unique_ptr<BotInstance>(new BotInstance{config} );
 	}
 
-	ApiSet BotInstance::getApiSet(const std::optional<uint64_t>& id, const ApiSet::Mode& mode) {
-		return {config, id, mode};
+	ApiSet BotInstance::getApiSet(const uint64_t& id, const ApiSet::AsyncMode& mode) {
+		return { ApiSet::AsyncConfig{id}, mode };
 	}
 
-	ApiSet BotInstance::getApiSet(const std::optional<uint64_t>& id)
+	ApiSet BotInstance::getApiSet(const ApiSet::SyncMode& mode)
 	{
-		return getApiSet(id, { false });
-	}
-
-	ApiSet BotInstance::getApiSet(const ApiSet::Mode& mode)
-	{
-		return getApiSet(std::nullopt, mode);
+		return { ApiSet::SyncConfig{config.host,config.api_port,config.token}, mode };
 	}
 
 	BotInstance::BotInstance(const Config& config) 
