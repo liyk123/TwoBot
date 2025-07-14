@@ -62,8 +62,7 @@ namespace twobot {
         using ApiConfig = std::variant<SyncConfig, AsyncConfig>;
 
         using SyncResult = std::pair<bool, nlohmann::json>;
-        using AsyncResult = std::future<SyncResult>;
-        using ApiResult = std::variant<SyncResult, AsyncResult>;
+        using ApiResult = std::future<SyncResult>;
         // 万api之母，负责提起所有的api的请求
         ApiResult callApi(const std::string &api_name, const nlohmann::json &data);
 

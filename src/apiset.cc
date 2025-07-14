@@ -44,6 +44,8 @@ namespace twobot
 
     inline ApiSet::ApiResult callApiSync(const std::string& api_name, const nlohmann::json& data, const ApiSet::SyncConfig& config, const ApiSet::SyncMode& mode)
     {
+        ApiSet::ApiResult ret;
+        std::promise<ApiSet::SyncResult> prom;
         ApiSet::SyncResult result{ false, {} };
         httplib::Client client(config.host, config.port);
         httplib::Headers headers = {
@@ -94,12 +96,13 @@ namespace twobot
                 {"error",e.what()}
             };
         }
-        return result;
+        ret = prom.get_future();
+        prom.set_value(result);
+        return ret;
     }
 
     bool ApiSet::testConnection() {
-        ApiResult result = callApi("/get_version_info", {});
-        return std::get_if<SyncResult>(&result)->first;
+        return callApi("/get_version_info", {}).get().first;
     }
 
 	ApiSet::ApiSet(const ApiConfig& config, const ApiSet::ApiMode& mode)
