@@ -16,6 +16,7 @@
 #include <brynet/net/wrapper/ServiceBuilder.hpp>
 #include <brynet/base/AppStatus.hpp>
 #include <tbb/tbb.h>
+#include <BS_thread_pool.hpp>
 #include "jsonex.hh"
 
 namespace twobot {
@@ -62,11 +63,11 @@ namespace twobot {
 		using namespace brynet::net;
 		using namespace brynet::net::http;
 		auto websocket_port = config.ws_port;
-		tbb::task_group tasks;
+		BS::thread_pool pool;
 		auto service = IOThreadTcpService::Create();
 		service->startWorkerThread(1);
 
-		auto ws_enter_callback = [this, &tasks](const HttpSession::Ptr& httpSession,
+		auto ws_enter_callback = [this, &pool](const HttpSession::Ptr& httpSession,
 			WebSocketFormat::WebSocketFrameType opcode,
 			const std::string& payload) {
 				try {
@@ -114,7 +115,7 @@ namespace twobot {
 
 					std::visit([&payload, httpSession](auto&& e) { 
 						e.raw_msg = nlohmann::json::parse(payload); 
-						e.raw_msg.get_to(e); 			
+						e.raw_msg.get_to(e);
 						if constexpr (std::is_convertible_v<decltype(e), Event::ConnectEvent>)
 						{
 							g_sessionMap[e.self_id] = httpSession;
@@ -122,7 +123,7 @@ namespace twobot {
 					}, *event);
 
 					if (event_callbacks.count(event_type) != 0) {
-						tasks.run([this, l_event = std::move(event)] {
+						pool.detach_task([this, l_event = std::move(event)] {
 							std::visit([this](auto&& e) {
 								event_callbacks[e.getType()](e);
 							}, *l_event);
@@ -164,7 +165,7 @@ namespace twobot {
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
 
-		tasks.wait();
+		pool.wait();
 	}
 
 	template<Event::Concept T>

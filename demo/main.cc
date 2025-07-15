@@ -55,8 +55,8 @@ int main(int argc, char** args) {
         {
             r = instance->getApiSet().sendPrivateMsg(msg.user_id, "你好，我是twobot！");
         }
-       
-        std::cout << r.get().second.dump() << std::endl;
+
+        r.valid() && std::cout << r.get().second << std::endl;
     });
 
 	instance->onEvent<PrivateMsg>([&instance](const PrivateMsg& msg) {
@@ -74,7 +74,7 @@ int main(int argc, char** args) {
 			std::sprintf(buf, "[CQ:avatar,qq=%llu]", msg.user_id);
 			r = instance->getApiSet(msg.self_id).sendPrivateMsg(msg.user_id, std::string(buf));
         }
-        std::cout << r.get().second.dump() << std::endl;
+        r.valid() && std::cout << r.get().second << std::endl;
     });
 
 	instance->onEvent<EnableEvent>([&instance](const EnableEvent& msg) {

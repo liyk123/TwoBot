@@ -7,6 +7,7 @@
     },
     "openssl",
     "nlohmann-json",
-    "tbb"
+    "tbb",
+    "bshoshany-thread-pool"
   ]
 }
