@@ -1,42 +1,44 @@
-![TwoBot](https://socialify.git.ci/TwoBotFramework/TwoBot/image?description=1&font=KoHo&forks=1&issues=1&language=1&logo=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F110024281%3Fs%3D200%26v%3D4&name=1&pattern=Circuit%20Board&pulls=1&stargazers=1&theme=Dark)
+![TwoBot](https://socialify.git.ci/liyk123/TwoBot/image?description=1&issues=1&language=1&name=1&owner=1&stargazers=1&theme=Auto)
 
 ## Build:
-#### 使用CMake + MinGW（未测试）, Linux用户可参考此文档（GCC 8测试通过）
-```bash
-git clone https://github.com/TwoBotFramework/TwoBot --recursive 
-# 中国大陆用户可以尝试下载Release里面的包
-cd TwoBot
-mkdir build
-cmake -S . -B build
-cd build
-mingw32-make
-```
-#### 使用Visual Studio 2017以上，需带CMake支持（VS2022已测试通过）
-```bash
-git clone https://github.com/TwoBotFramework/TwoBot --recursive 
-# 中国大陆用户可以尝试下载Release里面的包
-```
-然后用VS打开
+* vcpkg
+  - 请参阅[官方文档](https://github.com/microsoft/vcpkg)配置vcpkg，并配置`VCPKG_ROOT`的环境变量为vcpkg根目录
+  + bash
+    ```shell
+    git clone https://github.com/liyk123/TwoBot.git
+    cd TwoBot
+    cmake --preset <Debug/Release>
+    cmake --build --preset <Debug/Release>
+    ```
+  + Windows
+    - 直接使用Visual Studio 2022打开TwoBot目录, 等待初始化完成单击菜单栏: 生成->全部生成
 
+## Import:
+* vcpkg
+  - 目前可使用[liyk123/vcpkg](https://github.com/liyk123/vcpkg)的`pcrbotpp`分支作为vcpkg的仓库，需及时关注最新的提交
+* cmake
+  - 理论上可作为子模块导入到项目，未经测试。
 
 ## TODO:
-+ [x] 建立项目
-+ [x] 实现大致框架
-+ [x] 引入需要使用的第三方库
-+ [x] 支持onebot的所有功能
-    - [x] 实现Onebot HttpAPI的调用
-    - [x] 实现Onebot WebSocket接收消息
-+ [ ] 书写完善的文档
-
-## FAQ
-1. 为什么用WebSocket而不是HTTP接收消息？
-    答：WebSocket性能更高，而httpapi性能更差。
-2. 有哪些支持onebot的协议实现？
-    答：目前支持onebot的协议库有 oicq, go-cqhttp，mirai等
++ [x] Onebot-11
+    - [x] 正向http API
+    - [x] 反向WS
++ [x] 现代C++特性
+    - [x] 异步事件处理
+    - [x] 0成本抽象
+    - [x] json序列化
++ [ ] 集成vcpkg
+    - [x] 引入第三方模块
+    - [x] 自身模块化
+    - [ ] 添加到微软的port中
++ [ ] 完善文档
 
 ## 鸣谢
-- [MIT] Onebot 标准文档:    [onebot](https://github.com/botuniverse/onebot-11)
-- [MIT] C++最好用的Http库:  [cpp-httplib](https://github.com/yhirose/cpp-httplib/)
-- [MIT] C++最好用的Json库:  [json](https://github.com/nlohmann/json)
-- [MIT] brynet             [brynet](https://github.com/IronsDu/brynet)
-- [Unknown] 微软的Copilot:  [Copilot](https://copilot.github.com/)
+- [MIT] [TwoBotFramework/TwoBot](https://github.com/TwoBotFramework/TwoBot)
+- [MIT] [Onebot-11 标准文档](https://github.com/botuniverse/onebot-11)
+- [MIT] [yhirose/cpp-httplib](https://github.com/yhirose/cpp-httplib/)
+- [MIT] [nlohmann/json](https://github.com/nlohmann/json)
+- [MIT] [IronsDu/brynet](https://github.com/IronsDu/brynet)
+- [Apache-2.0] [uxlfoundation/oneTBB](https://github.com/uxlfoundation/oneTBB)
+- [MIT] [bshoshany/thread-pool](https://github.com/bshoshany/thread-pool)
+- [MIT] [microsoft/vcpkg](https://github.com/microsoft/vcpkg)
