@@ -5,6 +5,7 @@
 #include <utility>
 #include <brynet/net/http/HttpService.hpp>
 #include <tbb/tbb.h>
+#include <future>
 
 namespace twobot 
 {
@@ -27,7 +28,7 @@ namespace twobot
             {"params", data},
         };
         std::size_t seq = g_seq++;
-        ret = prom.get_future();
+        auto future = prom.get_future();
         if (mode.needResp)
         {
             content["echo"]["seq"] = seq;
@@ -39,13 +40,13 @@ namespace twobot
         }
         auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
         g_sessionMap[config.id]->send(std::move(wsFrame));
+        ret = future.get();
         return ret;
     }
 
     inline ApiSet::ApiResult callApiSync(const std::string& api_name, const nlohmann::json& data, const ApiSet::SyncConfig& config, const ApiSet::SyncMode& mode)
     {
         ApiSet::ApiResult ret;
-        std::promise<ApiSet::SyncResult> prom;
         ApiSet::SyncResult result{ false, {} };
         httplib::Client client(config.host, config.port);
         httplib::Headers headers = {
@@ -96,13 +97,12 @@ namespace twobot
                 {"error",e.what()}
             };
         }
-        ret = prom.get_future();
-        prom.set_value(result);
+        ret = result;        
         return ret;
     }
 
     bool ApiSet::testConnection() {
-        return callApi("/get_version_info", {}).get().first;
+        return callApi("/get_version_info", {}).first;
     }
 
 	ApiSet::ApiSet(const ApiConfig& config, const ApiSet::ApiMode& mode)
