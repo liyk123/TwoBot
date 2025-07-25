@@ -8,6 +8,9 @@
     "openssl",
     "nlohmann-json",
     "tbb",
-    "bshoshany-thread-pool"
+    {
+      "name": "libcoro",
+      "default-features": false
+    }
   ]
 }

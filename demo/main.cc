@@ -34,8 +34,8 @@ int main(int argc, char** args) {
         std::cout << "HTTP测试通过!" << std::endl;
     }
 
-	instance->onEvent<GroupMsg>([&instance](const GroupMsg& msg) {
-        twobot::ApiSet::ApiResult r = {};
+	instance->onEvent<GroupMsg>([&instance](const GroupMsg& msg) -> coro::task<> {
+		twobot::ApiSet::ApiResult r = []() -> ApiSet::ApiResult { co_return{}; }();
         if (msg.raw_message == "你好") 
         {
             r = instance->getApiSet().sendGroupMsg(msg.group_id, "你好，我是twobot！");
@@ -56,14 +56,15 @@ int main(int argc, char** args) {
             r = instance->getApiSet().sendPrivateMsg(msg.user_id, "你好，我是twobot！");
         }
 
-        std::cout << r << std::endl;
+        std::cout << coro::sync_wait(r) << std::endl;
+        co_return;
     });
 
-	instance->onEvent<PrivateMsg>([&instance](const PrivateMsg& msg) {
-        twobot::ApiSet::ApiResult r = {};
+	instance->onEvent<PrivateMsg>([&instance](const PrivateMsg& msg) -> coro::task<> {
+        twobot::ApiSet::SyncResult r = {};
         if (msg.raw_message == "你好")
         {
-            r = instance->getApiSet(msg.self_id, { true }).sendPrivateMsg(msg.user_id, "你好，我是twobot！");
+            r = co_await instance->getApiSet(msg.self_id, { true }).sendPrivateMsg(msg.user_id, "你好，我是twobot！");
         }
         else if (msg.raw_message == "头像")
         {
@@ -72,21 +73,25 @@ int main(int argc, char** args) {
             };
 			char buf[64];
 			std::sprintf(buf, "[CQ:avatar,qq=%llu]", msg.user_id);
-			r = instance->getApiSet(msg.self_id).sendPrivateMsg(msg.user_id, std::string(buf));
+			r = co_await instance->getApiSet(msg.self_id).sendPrivateMsg(msg.user_id, std::string(buf));
         }
         std::cout << r << std::endl;
+        co_return;
     });
 
-	instance->onEvent<EnableEvent>([&instance](const EnableEvent& msg) {
+	instance->onEvent<EnableEvent>([&instance](const EnableEvent& msg) -> coro::task<> {
         std::cout << "twobot已启动！机器人QQ："<< msg.self_id << std::endl;
+        co_return;
     });
 
-	instance->onEvent<DisableEvent>([&instance](const DisableEvent& msg) {
+	instance->onEvent<DisableEvent>([&instance](const DisableEvent& msg) -> coro::task<> {
         std::cout << "twobot已停止！ID: " << msg.self_id << std::endl;
+        co_return;
     });
 
-	instance->onEvent<ConnectEvent>([&instance](const ConnectEvent& msg) {
+	instance->onEvent<ConnectEvent>([&instance](const ConnectEvent& msg) -> coro::task<> {
         std::cout << "twobot已连接！ID: " << msg.self_id << std::endl;
+        co_return;
     });
 
 

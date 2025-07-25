@@ -16,14 +16,15 @@
 #include <brynet/net/wrapper/ServiceBuilder.hpp>
 #include <brynet/base/AppStatus.hpp>
 #include <tbb/tbb.h>
-#include <BS_thread_pool.hpp>
 #include "jsonex.hh"
 
 namespace twobot {
-	using PromMapType = tbb::concurrent_hash_map<std::size_t, std::promise<ApiSet::SyncResult>>;
-	extern PromMapType g_promMap = {};
+	using ApiResultMapType = tbb::concurrent_hash_map<std::size_t, ApiSet::SyncResult>;
+	extern ApiResultMapType g_apiResultMap = {};
 	using SessionMapType = tbb::concurrent_unordered_map<uint64_t, brynet::net::http::HttpSession::Ptr>;
 	extern SessionMapType g_sessionMap = {};
+	using ApiEventMapType = tbb::concurrent_hash_map<std::size_t, std::shared_ptr<coro::event>>;
+	extern ApiEventMapType g_apiEventMap = {};
 
 	std::unique_ptr<BotInstance> BotInstance::createInstance(const Config& config) {
 		return std::unique_ptr<BotInstance>(new BotInstance{config} );
@@ -45,16 +46,17 @@ namespace twobot {
 	}
 
 	template<Event::Concept E>
-	void BotInstance::onEvent(std::function<void(const E&)> callback) {
-		this->event_callbacks[E::getType()] = Callback([callback](const Event::Variant& event) {
+	void BotInstance::onEvent(std::function<coro::task<>(const E&)> callback) {
+		this->event_callbacks[E::getType()] = Callback([callback, this](const Event::Variant& event) -> coro::task<> {
 			try {
-				callback(*std::get_if<E>(&event));
+				co_await callback(*std::get_if<E>(&event));
 			}
 			catch (const std::exception& e) {
 				const auto& eventType = E::getType();
 				std::cerr << "EventType: {" << eventType.post_type << ", " << eventType.sub_type << "}\n";
 				std::cerr << "\tBotInstance::onEvent error: " << e.what() << std::endl;
 			}
+			co_return;
 		});
 	}
 
@@ -63,11 +65,10 @@ namespace twobot {
 		using namespace brynet::net;
 		using namespace brynet::net::http;
 		auto websocket_port = config.ws_port;
-		BS::thread_pool pool;
 		auto service = IOThreadTcpService::Create();
 		service->startWorkerThread(1);
 
-		auto ws_enter_callback = [this, &pool](const HttpSession::Ptr& httpSession,
+		auto ws_enter_callback = [this](const HttpSession::Ptr& httpSession,
 			WebSocketFormat::WebSocketFrameType opcode,
 			const std::string& payload) {
 				try {
@@ -86,10 +87,17 @@ namespace twobot {
 						{
 							auto seq = json_payload["echo"]["seq"].get<std::size_t>();
 							const auto& data = json_payload["data"];
-							PromMapType::accessor acc;
-							g_promMap.find(acc, seq);
-							acc->second.set_value({ !data.is_null(), data });
-							g_promMap.erase(acc);
+							{
+								ApiResultMapType::accessor acc;
+								g_apiResultMap.find(acc, seq);
+								acc->second = { !data.is_null(), data };
+							}
+							{
+								ApiEventMapType::accessor acc;
+								g_apiEventMap.find(acc, seq);
+								acc->second->set();
+								g_apiEventMap.erase(acc);
+							}
 						}
 						return;
 					}
@@ -123,11 +131,14 @@ namespace twobot {
 					}, *event);
 
 					if (event_callbacks.count(event_type) != 0) {
-						pool.detach_task([this, l_event = std::move(event)] {
-							std::visit([this](auto&& e) {
-								event_callbacks[e.getType()](e);
-							}, *l_event);
-						});
+						std::visit([this](auto &&e) {
+							auto coroTask = [](auto* pThis, auto e) -> coro::task<> {
+								co_await coro::default_executor::executor()->schedule();
+								co_await pThis->event_callbacks[e.getType()](e);
+								co_return;
+							};
+							coro::default_executor::executor()->spawn(coroTask(this, e));
+						}, *event);
 					}
 				}
 				catch (const std::exception& e) {
@@ -164,8 +175,6 @@ namespace twobot {
 		{
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
-
-		pool.wait();
 	}
 
 	template<Event::Concept T>
@@ -209,19 +218,19 @@ namespace twobot {
 		});
 
 		// 仅仅为了特化onEvent模板
-		instance->onEvent<Event::GroupMsg>([](const auto&) {});
-		instance->onEvent<Event::PrivateMsg>([](const auto&) {});
-		instance->onEvent<Event::EnableEvent>([](const auto&) {});
-		instance->onEvent<Event::DisableEvent>([](const auto&) {});
-		instance->onEvent<Event::ConnectEvent>([](const auto&) {});
-		instance->onEvent<Event::GroupUploadNotice>([](const auto&) {});
-		instance->onEvent<Event::GroupAdminNotice>([](const auto&) {});
-		instance->onEvent<Event::GroupDecreaseNotice>([](const auto&) {});
-		instance->onEvent<Event::GroupInceaseNotice>([](const auto&) {});
-		instance->onEvent<Event::GroupBanNotice>([](const auto&) {});
-		instance->onEvent<Event::FriendAddNotice>([](const auto&) {});
-		instance->onEvent<Event::GroupRecallNotice>([](const auto&) {});
-		instance->onEvent<Event::FriendRecallNotice>([](const auto&) {});
-		instance->onEvent<Event::GroupNotifyNotice>([](const auto&) {});
+		instance->onEvent<Event::GroupMsg>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::PrivateMsg>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::EnableEvent>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::DisableEvent>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::ConnectEvent>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::GroupUploadNotice>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::GroupAdminNotice>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::GroupDecreaseNotice>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::GroupInceaseNotice>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::GroupBanNotice>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::FriendAddNotice>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::GroupRecallNotice>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::FriendRecallNotice>([](const auto&) -> coro::task<> { co_return; });
+		instance->onEvent<Event::GroupNotifyNotice>([](const auto&) -> coro::task<> { co_return; });
 	}
 };

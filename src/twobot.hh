@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 #include <variant>
 #include <concepts>
+#include <coro/coro.hpp>
 
 namespace twobot
 {
@@ -61,7 +62,7 @@ namespace twobot {
         using ApiConfig = std::variant<SyncConfig, AsyncConfig>;
 
         using SyncResult = std::pair<bool, nlohmann::json>;
-        using ApiResult = SyncResult;
+        using ApiResult = coro::task<SyncResult>;
         // 万api之母，负责提起所有的api的请求
         ApiResult callApi(const std::string &api_name, const nlohmann::json &data);
 
@@ -838,7 +839,7 @@ namespace twobot {
     struct BotInstance{
         // 消息类型
         // 消息回调函数原型
-		using Callback = std::function<void(const Event::Variant&)>;
+		using Callback = std::function<coro::task<>(const Event::Variant&)>;
 
 
         // 创建机器人实例
@@ -851,7 +852,7 @@ namespace twobot {
         
         // 注册事件监听器
         template<Event::Concept E>
-		void onEvent(std::function<void(const E&)> callback);
+		void onEvent(std::function<coro::task<>(const E&)> callback);
 
         // [阻塞] 启动机器人
         void start();

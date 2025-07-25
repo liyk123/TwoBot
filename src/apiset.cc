@@ -10,43 +10,48 @@
 namespace twobot 
 {
     extern std::atomic<std::size_t> g_seq = 0;
-    using PromMapType = tbb::concurrent_hash_map<std::size_t, std::promise<ApiSet::SyncResult>>;
-    extern PromMapType g_promMap;
+    using ApiResultMapType = tbb::concurrent_hash_map<std::size_t, ApiSet::SyncResult>;
+    extern ApiResultMapType g_apiResultMap;
     using brynet::net::http::HttpSession;
     using SessionMapType = tbb::concurrent_unordered_map<uint64_t, HttpSession::Ptr>;
     extern SessionMapType g_sessionMap;
+    using ApiEventMapType = tbb::concurrent_hash_map<std::size_t, std::shared_ptr<coro::event>>;
+    extern ApiEventMapType g_apiEventMap;
     template<class... Ts> struct overload : Ts... { using Ts::operator()...; };
     template<class... Ts> overload(Ts...) -> overload<Ts...>;
 
     inline ApiSet::ApiResult callApiAsync(const std::string& api_name, const nlohmann::json& data, const ApiSet::AsyncConfig config, const ApiSet::AsyncMode& mode)
     {
-        ApiSet::ApiResult ret;
-        std::promise<ApiSet::SyncResult> prom;
+        auto apiEvent = std::make_shared<coro::event>();
         nlohmann::json content =
         {
             {"action", api_name.substr(1)},
             {"params", data},
         };
         std::size_t seq = g_seq++;
-        auto future = prom.get_future();
         if (mode.needResp)
         {
             content["echo"]["seq"] = seq;
-            g_promMap.insert({ seq, std::move(prom) });
-        }
-        else
-        {
-            prom.set_value({ false, {} });
+            g_apiResultMap.insert({ seq, {} });
+			g_apiEventMap.insert({ seq, apiEvent });
         }
         auto wsFrame = brynet::net::http::WebSocketFormat::wsFrameBuild(content.dump());
         g_sessionMap[config.id]->send(std::move(wsFrame));
-        ret = future.get();
+        auto makeApiRet = [](std::size_t seq, std::shared_ptr<coro::event> apiEvent) -> ApiSet::ApiResult {
+            co_await *apiEvent;
+            ApiResultMapType::accessor acc;
+            g_apiResultMap.find(acc, seq);
+            ApiSet::SyncResult val = std::move(acc->second);
+            g_apiResultMap.erase(acc);
+            co_return val;
+        };
+        auto makeEmptyRet = []() -> ApiSet::ApiResult { co_return {}; };
+        auto ret = mode.needResp ? makeApiRet(seq, apiEvent) : makeEmptyRet();
         return ret;
     }
 
     inline ApiSet::ApiResult callApiSync(const std::string& api_name, const nlohmann::json& data, const ApiSet::SyncConfig& config, const ApiSet::SyncMode& mode)
     {
-        ApiSet::ApiResult ret;
         ApiSet::SyncResult result{ false, {} };
         httplib::Client client(config.host, config.port);
         httplib::Headers headers = {
@@ -97,12 +102,12 @@ namespace twobot
                 {"error",e.what()}
             };
         }
-        ret = result;        
-        return ret;
+        auto makeRet = [](auto result) -> ApiSet::ApiResult { co_return result; };
+        return makeRet(result);
     }
 
     bool ApiSet::testConnection() {
-        return callApi("/get_version_info", {}).first;
+        return coro::sync_wait(callApi("/get_version_info", {})).first;
     }
 
 	ApiSet::ApiSet(const ApiConfig& config, const ApiSet::ApiMode& mode)

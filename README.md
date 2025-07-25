@@ -24,7 +24,7 @@
     - [x] 正向http API
     - [x] 反向WS
 + [x] 现代C++特性
-    - [x] 异步事件处理
+    - [x] 协程化异步事件处理
     - [x] 0成本抽象
     - [x] json序列化
 + [ ] 集成vcpkg
@@ -40,5 +40,5 @@
 - [MIT] [nlohmann/json](https://github.com/nlohmann/json)
 - [MIT] [IronsDu/brynet](https://github.com/IronsDu/brynet)
 - [Apache-2.0] [uxlfoundation/oneTBB](https://github.com/uxlfoundation/oneTBB)
-- [MIT] [bshoshany/thread-pool](https://github.com/bshoshany/thread-pool)
+- [Apache-2.0] [jbaldwin/libcoro](https://github.com/jbaldwin/libcoro)
 - [MIT] [microsoft/vcpkg](https://github.com/microsoft/vcpkg)
