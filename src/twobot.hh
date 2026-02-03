@@ -815,6 +815,8 @@ namespace twobot {
         };
 
         using Variant = std::variant<
+            GroupMsg,
+            PrivateMsg,
             ConnectEvent,
             DisableEvent,
             EnableEvent,
@@ -824,11 +826,9 @@ namespace twobot {
             GroupBanNotice,
             GroupDecreaseNotice,
             GroupInceaseNotice,
-            GroupMsg,
             GroupNotifyNotice,
             GroupRecallNotice,
-            GroupUploadNotice,
-            PrivateMsg
+            GroupUploadNotice
         >;
 
         std::optional<Variant> construct(const EventType& evnet);

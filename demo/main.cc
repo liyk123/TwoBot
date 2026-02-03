@@ -1,6 +1,6 @@
 ﻿#include <twobot.hh>
 #include <iostream>
-
+#include <httplib.h>
 /// 警告: 这个项目使用了JSON for modern C++, 必须使用UTF8编码，不然会出现异常。
 /// warning: this project uses JSON for modern C++, must use UTF8 encoding, otherwise it will throw exception.
 
@@ -18,7 +18,7 @@ int main(int argc, char** args) {
     std::setlocale(LC_ALL, localeName);
     std::locale::global(std::locale(localeName));
     Config config = {
-        "10.8.0.1",
+        "10.9.0.1",
         5700,
         9444
     };
@@ -42,14 +42,13 @@ int main(int argc, char** args) {
         }
 		else if (msg.raw_message.find("AT我") != std::string::npos) 
         {
-			std::string at = "[CQ:at,qq=" + std::to_string(msg.user_id) + "]";
+			std::string at = std::format("[CQ:at,qq={}]", msg.user_id);
 			r = instance->getApiSet().sendGroupMsg(msg.group_id, at + "要我at你干啥？");
         }
         else if (msg.raw_message == "头像")
         {
-			char buf[64];
-			std::sprintf(buf, "[CQ:avatar,qq=%llu]", msg.user_id);
-			r = instance->getApiSet().sendGroupMsg(msg.group_id, std::string(buf));
+            auto cqcode = std::format("[CQ:avatar,qq={}]", msg.user_id);
+			r = instance->getApiSet().sendGroupMsg(msg.group_id, cqcode);
         }
         else if (msg.raw_message == "私聊")
         {
@@ -71,9 +70,8 @@ int main(int argc, char** args) {
             nlohmann::json param = {
                 {"user_id", msg.user_id}
             };
-			char buf[64];
-			std::sprintf(buf, "[CQ:avatar,qq=%llu]", msg.user_id);
-			r = co_await instance->getApiSet(msg.self_id).sendPrivateMsg(msg.user_id, std::string(buf));
+			auto cqcode = std::format("[CQ:avatar,qq={}]", msg.user_id);
+			r = co_await instance->getApiSet(msg.self_id).sendPrivateMsg(msg.user_id, cqcode);
         }
         std::cout << r << std::endl;
         co_return;

@@ -47,7 +47,7 @@ namespace twobot {
 
 	template<Event::Concept E>
 	void BotInstance::onEvent(std::function<coro::task<>(const E&)> callback) {
-		this->event_callbacks[E::getType()] = Callback([callback, this](const Event::Variant& event) -> coro::task<> {
+		event_callbacks.emplace(E::getType(), Callback([callback](const Event::Variant& event) -> coro::task<> {
 			try {
 				co_await callback(*std::get_if<E>(&event));
 			}
@@ -57,7 +57,7 @@ namespace twobot {
 				std::cerr << "\tBotInstance::onEvent error: " << e.what() << std::endl;
 			}
 			co_return;
-		});
+		}));
 	}
 
 	void BotInstance::start() {
@@ -130,15 +130,14 @@ namespace twobot {
 						}
 					}, *event);
 
-					if (event_callbacks.count(event_type) != 0) {
-						std::visit([this](auto &&e) {
-							auto coroTask = [](auto* pThis, auto e) -> coro::task<> {
-								co_await coro::default_executor::executor()->schedule();
-								co_await pThis->event_callbacks[e.getType()](e);
-								co_return;
-							};
-							coro::default_executor::executor()->spawn(coroTask(this, e));
-						}, *event);
+					auto it = event_callbacks.find(event_type);
+					if (it != event_callbacks.end()) {
+						auto coroTask = [](Callback callback, Event::Variant e) -> coro::task<> {
+							co_await coro::default_executor::executor()->schedule();
+							co_await callback(e);
+							co_return;
+						};
+						coro::default_executor::executor()->spawn(coroTask(it->second, *event));
 					}
 				}
 				catch (const std::exception& e) {
@@ -177,35 +176,34 @@ namespace twobot {
 		}
 	}
 
-	template<Event::Concept T>
-	inline auto _construct_pair() -> std::pair<EventType, std::function<Event::Variant()>>
+	template<typename... T>
+	concept VariadicConcept = (Event::Concept<T> && ...);
+
+	template<VariadicConcept... T>
+	inline void _construct_call(const EventType& event, std::optional<Event::Variant>& obj)
 	{
-		return { T::getType(), [] {return T(); } };
+        ([&] { return T::getType() == event ? (obj.emplace(std::in_place_type<T>), true) : false; }() || ...);
 	}
 
 	std::optional<Event::Variant> Event::construct(const EventType& event) {
-		static const std::unordered_map<EventType, std::function<Event::Variant()>> constructs = {
-			_construct_pair<ConnectEvent>(),
-			_construct_pair<DisableEvent>(),
-			_construct_pair<EnableEvent>(),
-			_construct_pair<FriendAddNotice>(),
-			_construct_pair<FriendRecallNotice>(),
-			_construct_pair<GroupAdminNotice>(),
-			_construct_pair<GroupBanNotice>(),
-			_construct_pair<GroupDecreaseNotice>(),
-			_construct_pair<GroupInceaseNotice>(),
-			_construct_pair<GroupMsg>(),
-			_construct_pair<GroupNotifyNotice>(),
-			_construct_pair<GroupRecallNotice>(),
-			_construct_pair<GroupUploadNotice>(),
-			_construct_pair<PrivateMsg>()
-		};
-		auto itRet = constructs.find(event);
-		if (itRet != constructs.end())
-		{
-			return itRet->second();
-		}
-		return std::nullopt;
+		std::optional<Event::Variant> obj;
+		_construct_call<
+			GroupMsg,
+			PrivateMsg,
+			ConnectEvent,
+			DisableEvent,
+			EnableEvent,
+			FriendAddNotice,
+			FriendRecallNotice,
+			GroupAdminNotice,
+			GroupBanNotice,
+			GroupDecreaseNotice,
+			GroupInceaseNotice,
+			GroupNotifyNotice,
+			GroupRecallNotice,
+			GroupUploadNotice
+		>(event, obj);
+		return obj;
 	}
 
 	void _::export_functions() {
