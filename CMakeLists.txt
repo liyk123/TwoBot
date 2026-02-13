@@ -28,7 +28,6 @@ target_link_libraries(TwoBot PUBLIC
     OpenSSL::SSL 
     OpenSSL::Crypto 
     TBB::tbb TBB::tbbmalloc 
-    TBB::tbbmalloc_proxy 
     PkgConfig::libcoro
 )
 target_compile_definitions(TwoBot PUBLIC _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING CPPHTTPLIB_OPENSSL_SUPPORT BRYNET_USE_OPENSSL)
