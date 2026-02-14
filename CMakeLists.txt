@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.19)
-project(TwoBot)
+project(twobot)
 
 set(CMAKE_CXX_STANDARD 20)
 
 
-add_library(TwoBot STATIC
+add_library(twobot STATIC
         src/twobot.hh
         src/twobot.cc
         src/apiset.cc
@@ -20,9 +20,9 @@ find_package(PkgConfig REQUIRED)
 find_path(BRYNET_INCLUDE_DIRS "brynet/Version.hpp")
 pkg_check_modules(libcoro REQUIRED IMPORTED_TARGET libcoro)
 
-target_include_directories(TwoBot PRIVATE ${BRYNET_INCLUDE_DIRS})
+target_include_directories(twobot PRIVATE ${BRYNET_INCLUDE_DIRS})
 
-target_link_libraries(TwoBot PUBLIC 
+target_link_libraries(twobot PUBLIC 
     nlohmann_json::nlohmann_json 
     httplib::httplib 
     OpenSSL::SSL 
@@ -30,28 +30,28 @@ target_link_libraries(TwoBot PUBLIC
     TBB::tbb TBB::tbbmalloc 
     PkgConfig::libcoro
 )
-target_compile_definitions(TwoBot PUBLIC _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING CPPHTTPLIB_OPENSSL_SUPPORT BRYNET_USE_OPENSSL)
+target_compile_definitions(twobot PUBLIC _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING CPPHTTPLIB_OPENSSL_SUPPORT BRYNET_USE_OPENSSL)
 
-add_executable(TwoBot-demo demo/main.cc)
-target_link_libraries(TwoBot-demo TwoBot)
+add_executable(twobot-demo demo/main.cc)
+target_link_libraries(twobot-demo twobot)
 
-target_include_directories(TwoBot PUBLIC 
+target_include_directories(twobot PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>   # for headers when building
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>  # for client in install mode
 )
 
-install(TARGETS TwoBot
-            EXPORT TwoBot_targets
+install(TARGETS twobot
+            EXPORT twobot_targets
             LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 install(FILES src/twobot.hh DESTINATION include)
 
-install(EXPORT TwoBot_targets
-        FILE TwoBot-targets.cmake
-        NAMESPACE TwoBot::
-        DESTINATION share/TwoBot)
+install(EXPORT twobot_targets
+        FILE twobot-targets.cmake
+        NAMESPACE twobot::
+        DESTINATION share/twobot)
 
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/TwoBot-config.cmake"
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/twobot-config.cmake"
 "include(CMakeFindDependencyMacro)\n"
 "find_dependency(OpenSSL REQUIRED)\n"
 "find_dependency(httplib CONFIG REQUIRED)\n"
@@ -59,11 +59,11 @@ file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/TwoBot-config.cmake"
 "find_dependency(TBB CONFIG REQUIRED)\n"
 "find_dependency(PkgConfig REQUIRED)\n"
 "pkg_check_modules(libcoro REQUIRED IMPORTED_TARGET libcoro)\n"
-"include(\"\${CMAKE_CURRENT_LIST_DIR}/TwoBot-targets.cmake\")\n"
+"include(\"\${CMAKE_CURRENT_LIST_DIR}/twobot-targets.cmake\")\n"
 )
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/TwoBot-config.cmake"
-        DESTINATION share/TwoBot)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/twobot-config.cmake"
+        DESTINATION share/twobot)
 
 if(MSVC)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8")
