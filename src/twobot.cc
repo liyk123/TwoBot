@@ -170,10 +170,7 @@ namespace twobot {
 			.asyncRun()
 			;
 
-		while (getchar() != EOF)
-		{
-			std::this_thread::sleep_for(std::chrono::seconds(1));
-		}
+		std::promise<void>().get_future().wait();
 	}
 
 	template<typename... T>
