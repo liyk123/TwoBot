@@ -857,10 +857,14 @@ namespace twobot {
         // [阻塞] 启动机器人
         void start();
 
+        // 停止机器人
+        void stop();
+
         ~BotInstance() = default;
     protected:
         Config config;
         std::unordered_map<EventType, Callback> event_callbacks{};
+        std::atomic_flag stop_flag{};
     protected:
         explicit BotInstance(const Config &config);
 

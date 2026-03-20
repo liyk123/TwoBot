@@ -64,6 +64,7 @@ namespace twobot {
 		using namespace brynet::base;
 		using namespace brynet::net;
 		using namespace brynet::net::http;
+		stop_flag.clear();
 		auto websocket_port = config.ws_port;
 		auto service = IOThreadTcpService::Create();
 		service->startWorkerThread(1);
@@ -170,7 +171,13 @@ namespace twobot {
 			.asyncRun()
 			;
 
-		std::promise<void>().get_future().wait();
+		stop_flag.wait(false);
+	}
+
+	void BotInstance::stop()
+	{
+		stop_flag.test_and_set();
+		stop_flag.notify_all();
 	}
 
 	template<typename... T>
